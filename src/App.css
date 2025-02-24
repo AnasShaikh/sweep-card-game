@@ -1,118 +1,153 @@
 main {
-  height: 100vh;
+  height: 100%;
   width: 100%;
   display: flex;
   flex-direction: column;
+  align-content: center;
   align-items: center;
-  padding: 20px;
-  background-color: #f5f5f5;
 }
+
+
+/* Table CSS*/
 
 .playTable {
-  max-width: 1200px;
-  width: 95%;
-  padding: 20px;
-  border: 2px solid #ddd;
+  height: auto;
+  width: 1200px; 
+  padding: 10px;
+  border: 1px solid silver;
   border-radius: 16px;
-  background-color: #fff;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-.pointsSection {
-  margin-bottom: 20px;
-  text-align: center;
-}
-
-.pointsSection h4 {
-  margin: 10px 0;
-  color: #333;
+  
+  display: flex;
+  flex-direction: column;
+  align-content: center;
+  align-items: left;
+  justify-content: center;
 }
 
 .playerArea {
-  width: 300px;
-  background-color: #fff;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  padding: 15px;
-  margin: 10px auto;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  height: 190px;
+  width: 260px;
+  background-color: white;
+  margin: 10px;
+  display: flex;
+  flex-direction: column;;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+#plyr1{
+  margin-left: 500px;
+  margin-top: -500px;
+}
+
+#plyr2 {
+/*  margin-right: 680px;*/
+   margin-left: 500px;
+}
+
+#plyr3 {
+   margin-left: 500px;
+}
+
+#plyr4 {
+   margin-left: 500px;
 }
 
 #board {
-  background-color: #1a472a;
+  /* margin-top: -210px;*/
+  background-color: maroon;
   color: white;
-  width: 100%;
-  max-width: 600px;
-  min-height: 200px;
-  margin: 20px auto;
+  width: 400px;
+  height: 400px;
 }
 
 .cardDivBoard {
+ 
+  overflow-y: auto; /* Adds vertical scroll if content exceeds the height */
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  padding: 10px;
-  justify-content: center;
-}
-
-.cardDivPlay {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  min-height: 100px;
-  padding: 10px;
-  justify-content: center;
-}
-
-.cardImage {
-  width: 60px;
-  height: 84px;
-  transition: transform 0.2s;
-}
-
-.handCard {
-  cursor: pointer;
-}
-
-.handCard:hover .cardImage {
-  transform: translateY(-5px);
+  flex-direction : row;
 }
 
 .selected {
-  border: 2px solid #f39c12;
-  border-radius: 4px;
-  background-color: #fff3cd;
+    border: 2px solid #f39c12;
+    background-color: #f7dc6f;
 }
 
 .collectedCards {
-  margin-top: 10px;
-  padding: 10px;
-  border-top: 1px solid #ddd;
+  margin-top: -150px;
+  margin-left: 239px;
+  max-height: 50px;
+  z-index: -2;
 }
 
-.collectedCards h4 {
-  margin: 0 0 10px 0;
-  font-size: 14px;
-  color: #666;
+.collectedCard {
+  display: inline-block;
+  margin: 2px;
+  padding: 5px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  background-color: #f9f9f9;
 }
 
-.cardDiv {
+.cardDivPlay {
+  overflow-y: auto; /* Adds vertical scroll if content exceeds the height */
+  height: 150px;
   display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
+  flex-direction : row;
 }
 
-button {
-  background-color: #2ecc71;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 4px;
-  cursor: pointer;
-  margin: 5px;
-  transition: background-color 0.2s;
+.cardImage {
+    width: 50px;
+    height: 90px;
 }
 
-button:hover {
-  background-color: #27ae60;
+
+.handCard:nth-child(2) {
+  margin-left: -20px;
 }
+
+.handCard:nth-child(3) {
+  margin-left: -20px;
+}
+
+.handCard:nth-child(4) {
+  margin-left: -20px;
+}
+
+.handCard:nth-child(5) {
+  margin-left: -20px;
+}
+
+.handCard:nth-child(6) {
+  margin-left: -20px;
+}
+
+.handCard:nth-child(7) {
+  margin-left: -20px;
+}
+
+.handCard:nth-child(8) {
+  margin-left: -20px;
+}
+
+.handCard:nth-child(9) {
+  margin-left: -20px;
+}
+
+.handCard:nth-child(10) {
+  margin-left: -20px;
+}
+
+.handCard:nth-child(11) {
+  margin-left: -20px;
+}
+
+.handCard:nth-child(12) {
+  margin-left: -20px;
+}
+
+
+
+
+/* Table CSS*/
+
