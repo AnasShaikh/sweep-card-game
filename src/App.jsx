@@ -4,7 +4,7 @@ import Table from './table';
 export default function App() {
   return (
     <main>
-     Seep Saap Soop
+      <h1>Seep Saap Soop</h1>
       <Table/>
     </main>
   )

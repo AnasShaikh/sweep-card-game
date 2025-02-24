@@ -1,153 +1,118 @@
 main {
-  height: 100%;
+  height: 100vh;
   width: 100%;
   display: flex;
   flex-direction: column;
-  align-content: center;
   align-items: center;
+  padding: 20px;
+  background-color: #f5f5f5;
 }
 
-
-/* Table CSS*/
-
 .playTable {
-  height: auto;
-  width: 1200px; 
-  padding: 10px;
-  border: 1px solid silver;
+  max-width: 1200px;
+  width: 95%;
+  padding: 20px;
+  border: 2px solid #ddd;
   border-radius: 16px;
-  
-  display: flex;
-  flex-direction: column;
-  align-content: center;
-  align-items: left;
-  justify-content: center;
+  background-color: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.pointsSection {
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.pointsSection h4 {
+  margin: 10px 0;
+  color: #333;
 }
 
 .playerArea {
-  height: 190px;
-  width: 260px;
-  background-color: white;
-  margin: 10px;
-  display: flex;
-  flex-direction: column;;
-  align-items: center;
-  justify-content: flex-start;
-}
-
-#plyr1{
-  margin-left: 500px;
-  margin-top: -500px;
-}
-
-#plyr2 {
-/*  margin-right: 680px;*/
-   margin-left: 500px;
-}
-
-#plyr3 {
-   margin-left: 500px;
-}
-
-#plyr4 {
-   margin-left: 500px;
+  width: 300px;
+  background-color: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 15px;
+  margin: 10px auto;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
 #board {
-  /* margin-top: -210px;*/
-  background-color: maroon;
+  background-color: #1a472a;
   color: white;
-  width: 400px;
-  height: 400px;
+  width: 100%;
+  max-width: 600px;
+  min-height: 200px;
+  margin: 20px auto;
 }
 
 .cardDivBoard {
- 
-  overflow-y: auto; /* Adds vertical scroll if content exceeds the height */
   display: flex;
-  flex-direction : row;
-}
-
-.selected {
-    border: 2px solid #f39c12;
-    background-color: #f7dc6f;
-}
-
-.collectedCards {
-  margin-top: -150px;
-  margin-left: 239px;
-  max-height: 50px;
-  z-index: -2;
-}
-
-.collectedCard {
-  display: inline-block;
-  margin: 2px;
-  padding: 5px;
-  border: 1px solid #ccc;
-  border-radius: 3px;
-  background-color: #f9f9f9;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px;
+  justify-content: center;
 }
 
 .cardDivPlay {
-  overflow-y: auto; /* Adds vertical scroll if content exceeds the height */
-  height: 150px;
   display: flex;
-  flex-direction : row;
+  flex-wrap: wrap;
+  gap: 5px;
+  min-height: 100px;
+  padding: 10px;
+  justify-content: center;
 }
 
 .cardImage {
-    width: 50px;
-    height: 90px;
+  width: 60px;
+  height: 84px;
+  transition: transform 0.2s;
 }
 
-
-.handCard:nth-child(2) {
-  margin-left: -20px;
+.handCard {
+  cursor: pointer;
 }
 
-.handCard:nth-child(3) {
-  margin-left: -20px;
+.handCard:hover .cardImage {
+  transform: translateY(-5px);
 }
 
-.handCard:nth-child(4) {
-  margin-left: -20px;
+.selected {
+  border: 2px solid #f39c12;
+  border-radius: 4px;
+  background-color: #fff3cd;
 }
 
-.handCard:nth-child(5) {
-  margin-left: -20px;
+.collectedCards {
+  margin-top: 10px;
+  padding: 10px;
+  border-top: 1px solid #ddd;
 }
 
-.handCard:nth-child(6) {
-  margin-left: -20px;
+.collectedCards h4 {
+  margin: 0 0 10px 0;
+  font-size: 14px;
+  color: #666;
 }
 
-.handCard:nth-child(7) {
-  margin-left: -20px;
+.cardDiv {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
 }
 
-.handCard:nth-child(8) {
-  margin-left: -20px;
+button {
+  background-color: #2ecc71;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin: 5px;
+  transition: background-color 0.2s;
 }
 
-.handCard:nth-child(9) {
-  margin-left: -20px;
+button:hover {
+  background-color: #27ae60;
 }
-
-.handCard:nth-child(10) {
-  margin-left: -20px;
-}
-
-.handCard:nth-child(11) {
-  margin-left: -20px;
-}
-
-.handCard:nth-child(12) {
-  margin-left: -20px;
-}
-
-
-
-
-/* Table CSS*/
-
