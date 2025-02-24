@@ -1,0 +1,153 @@
+main {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-content: center;
+  align-items: center;
+}
+
+
+/* Table CSS*/
+
+.playTable {
+  height: auto;
+  width: 1200px; 
+  padding: 10px;
+  border: 1px solid silver;
+  border-radius: 16px;
+  
+  display: flex;
+  flex-direction: column;
+  align-content: center;
+  align-items: left;
+  justify-content: center;
+}
+
+.playerArea {
+  height: 190px;
+  width: 260px;
+  background-color: white;
+  margin: 10px;
+  display: flex;
+  flex-direction: column;;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+#plyr1{
+  margin-left: 500px;
+  margin-top: -500px;
+}
+
+#plyr2 {
+/*  margin-right: 680px;*/
+   margin-left: 500px;
+}
+
+#plyr3 {
+   margin-left: 500px;
+}
+
+#plyr4 {
+   margin-left: 500px;
+}
+
+#board {
+  /* margin-top: -210px;*/
+  background-color: maroon;
+  color: white;
+  width: 400px;
+  height: 400px;
+}
+
+.cardDivBoard {
+ 
+  overflow-y: auto; /* Adds vertical scroll if content exceeds the height */
+  display: flex;
+  flex-direction : row;
+}
+
+.selected {
+    border: 2px solid #f39c12;
+    background-color: #f7dc6f;
+}
+
+.collectedCards {
+  margin-top: -150px;
+  margin-left: 239px;
+  max-height: 50px;
+  z-index: -2;
+}
+
+.collectedCard {
+  display: inline-block;
+  margin: 2px;
+  padding: 5px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  background-color: #f9f9f9;
+}
+
+.cardDivPlay {
+  overflow-y: auto; /* Adds vertical scroll if content exceeds the height */
+  height: 150px;
+  display: flex;
+  flex-direction : row;
+}
+
+.cardImage {
+    width: 50px;
+    height: 90px;
+}
+
+
+.handCard:nth-child(2) {
+  margin-left: -20px;
+}
+
+.handCard:nth-child(3) {
+  margin-left: -20px;
+}
+
+.handCard:nth-child(4) {
+  margin-left: -20px;
+}
+
+.handCard:nth-child(5) {
+  margin-left: -20px;
+}
+
+.handCard:nth-child(6) {
+  margin-left: -20px;
+}
+
+.handCard:nth-child(7) {
+  margin-left: -20px;
+}
+
+.handCard:nth-child(8) {
+  margin-left: -20px;
+}
+
+.handCard:nth-child(9) {
+  margin-left: -20px;
+}
+
+.handCard:nth-child(10) {
+  margin-left: -20px;
+}
+
+.handCard:nth-child(11) {
+  margin-left: -20px;
+}
+
+.handCard:nth-child(12) {
+  margin-left: -20px;
+}
+
+
+
+
+/* Table CSS*/
+
