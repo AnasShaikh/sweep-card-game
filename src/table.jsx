@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import initialDeck from './initialDeck'; 
 
@@ -18,7 +19,7 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
     const [team2SeepCount, setTeam2SeepCount] = useState(0);
     const [team1Points, setTeam1Points] = useState(0);
     const [team2Points, setTeam2Points] = useState(0);
-
+    
     // Initialize game state if provided
     useEffect(() => {
         if (initialGameState) {
@@ -38,11 +39,11 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
             setTeam2Points(initialGameState.team2Points);
         }
     }, [initialGameState]);
-
+    
     // Listen for game actions from other players
     useEffect(() => {
         if (!socket) return;
-
+        
         socket.on('gameAction', ({ player, action, data }) => {
             switch (action) {
                 case 'dealCards':
@@ -56,19 +57,19 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
                     setSelectedTableCards([]);
                     setDealVisible(false);
                     break;
-
+                    
                 case 'dealRemainingCards':
                     setPlayers(data.players);
                     setDeck(data.deck);
                     setRemainingCardsDealt(true);
                     setShowDRCButton(false);
                     break;
-
+                    
                 case 'makeCall':
                     setCall(data.call);
                     setBoardVisible(true);
                     break;
-
+                    
                 case 'pickup':
                 case 'throwAway':
                 case 'stack':
@@ -82,21 +83,21 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
                     setTeam2SeepCount(data.team2SeepCount);
                     setShowDRCButton(data.showDRCButton);
                     break;
-
+                    
                 default:
                     break;
             }
         });
-
+        
         return () => {
             socket.off('gameAction');
         };
     }, [socket]);
-
+    
     // Update game state after any significant change
     useEffect(() => {
         if (!onGameAction) return;
-
+        
         const gameState = {
             deck,
             players,
@@ -112,7 +113,7 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
             team1Points,
             team2Points
         };
-
+        
         onGameAction('updateGameState', gameState);
     }, [
         deck, players, currentTurn, moveCount, call, 
@@ -164,7 +165,7 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
             plyr4: shuffledDeck.splice(0, 4),
             board: shuffledDeck.splice(0, 4)
         };
-
+        
         setPlayers(newPlayers);
         setDeck(shuffledDeck);
         setMoveCount(1);
@@ -174,7 +175,7 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
         setSelectedHandCard(null);
         setSelectedTableCards([]);
         setDealVisible(false);
-
+        
         // Send action to other players
         if (onGameAction) {
             onGameAction('dealCards', {
@@ -191,12 +192,12 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
         newPlayers.plyr2.push(...remainingCards.splice(0, 8));
         newPlayers.plyr3.push(...remainingCards.splice(0, 8));
         newPlayers.plyr4.push(...remainingCards.splice(0, 8));
-
+        
         setPlayers(newPlayers);
         setDeck(remainingCards);
         setRemainingCardsDealt(true);
         setShowDRCButton(false);
-
+        
         // Send action to other players
         if (onGameAction) {
             onGameAction('dealRemainingCards', {
@@ -209,7 +210,7 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
     const handleCall = (callValue) => {
         setCall(callValue);
         setBoardVisible(true);
-
+        
         // Send action to other players
         if (onGameAction) {
             onGameAction('makeCall', { call: callValue });
@@ -384,7 +385,7 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
 
         // Check if the board is cleared
         const boardCleared = newBoard.length === 0;
-
+        
         let newTeam1Points = team1Points;
         let newTeam2Points = team2Points;
         let newTeam1SeepCount = team1SeepCount;
@@ -410,12 +411,12 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
                 }
             }
         }
-
+        
         const newCollectedCards = {
             ...collectedCards,
             [currentTurn]: [...collectedCards[currentTurn], selectedHandCard, ...selectedTableCards]
         };
-
+        
         const nextPlayerTurn = nextPlayer(currentTurn);
         const nextMoveCount = moveCount + 1;
         const nextShowDRCButton = nextMoveCount === 4;
@@ -577,19 +578,7 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
             );
         });
     };
-
-    const getTurnMessage = () => {
-        if (!isMyTurn) {
-          return `Waiting for ${playerNames[currentTurn]}'s move...`;
-        } else if (moveCount === 1 && !call) {
-          return `${playerNames[position]}, make your call:`;
-        } else if (call) {
-          return `${playerNames[position]}, choose your action:`;
-        } else {
-            return '';
-        }
-      };
-
+    
     // Check if it's current user's turn
     const isMyTurn = position === currentTurn;
 
@@ -598,16 +587,15 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
             <div className="pointsSection">
                 <h4>Team 1 ({playerNames.plyr1} & {playerNames.plyr3}) Points: {team1Points + calculatePoints([...collectedCards.plyr1, ...collectedCards.plyr3])}</h4>
                 <h4>Team 2 ({playerNames.plyr2} & {playerNames.plyr4}) Points: {team2Points + calculatePoints([...collectedCards.plyr2, ...collectedCards.plyr4])}</h4>
-                <h4 className={isMyTurn ? "my-turn" : ""}>{getTurnMessage()}</h4>
             </div>
-
+            
             <div className='playerArea' id='board'>
                 <h3>Board</h3>
                 <div className="cardDivBoard">
                     {boardVisible ? renderBoardCards() : <div>Cards Hidden</div>}
                 </div>
             </div>
-
+            
             <div className='playerArea' id='plyr1'>
                 <h3>{playerNames.plyr1} {currentTurn === 'plyr1' ? '(Current Turn)' : ''}</h3>
                 <div className="cardDivPlay">
@@ -631,7 +619,7 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
                     </div>
                 </div>
             </div>
-
+            
             <div className='playerArea' id='plyr2'>
                 <h3>{playerNames.plyr2} {currentTurn === 'plyr2' ? '(Current Turn)' : ''}</h3>
                 <div className="cardDivPlay">
@@ -655,7 +643,7 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
                     </div>
                 </div>
             </div>
-
+            
             <div className='playerArea' id='plyr3'>
                 <h3>{playerNames.plyr3} {currentTurn === 'plyr3' ? '(Current Turn)' : ''}</h3>
                 <div className="cardDivPlay">
@@ -679,7 +667,7 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
                     </div>
                 </div>
             </div>
-
+            
             <div className='playerArea' id='plyr4'>
                 <h3>{playerNames.plyr4} {currentTurn === 'plyr4' ? '(Current Turn)' : ''}</h3>
                 <div className="cardDivPlay">
@@ -703,13 +691,14 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
                     </div>
                 </div>
             </div>
-
+            
             <div className="controls">
                 {position === 'plyr1' && dealVisible && <button onClick={dealCards}>Deal Cards</button>}
                 {isMyTurn && showDRCButton && <button onClick={dealRemainingCards}>Deal Remaining Cards</button>}
-
+                
                 {isMyTurn && moveCount === 1 && currentTurn === 'plyr1' && !call && (
                     <div>
+                        <h4>{playerNames.plyr1}, make your call:</h4>
                         {checkValidCalls().map(num => (
                             <button key={num} onClick={() => handleCall(num)}>
                                 Call {num}
@@ -717,9 +706,10 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
                         ))}
                     </div>
                 )}
-
+                
                 {isMyTurn && call && (
                     <div>
+                        <h4>{`${playerNames[currentTurn]}, choose your action:`}</h4>
                         <p>Select a card from your hand, then select cards from the table.</p>
                         <div>
                             <button onClick={handlePickup}>Confirm Pickup</button>
@@ -728,7 +718,7 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
                         </div>
                     </div>
                 )}
-
+                
                 {!isMyTurn && (
                     <div className="waiting-message">
                         <p>Waiting for {playerNames[currentTurn]}'s move...</p>
