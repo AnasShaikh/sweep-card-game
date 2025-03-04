@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
@@ -16,9 +15,11 @@ export default function App() {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       try {
-        setUser(JSON.parse(storedUser));
+        const userData = JSON.parse(storedUser);
+        console.log("Loaded user from localStorage:", userData);
+        setUser(userData);
       } catch (err) {
-        console.error('Failed to parse stored user');
+        console.error("Error parsing stored user data:", err);
         localStorage.removeItem('user');
       }
     }

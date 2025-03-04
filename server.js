@@ -113,11 +113,31 @@ app.get('*', (req, res) => {
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
   
+  // Store user authentication on socket connection
+  socket.on('authenticate', (userData) => {
+    if (userData && userData.userId) {
+      // Store the user info on the socket
+      socket.userId = userData.userId;
+      console.log(`Socket ${socket.id} authenticated as user ${userData.userId}`);
+      
+      // Create user if doesn't exist (in case of page refresh or new tab)
+      if (!users[userData.userId]) {
+        users[userData.userId] = { 
+          id: userData.userId, 
+          username: userData.username, 
+          currentGame: null 
+        };
+        console.log(`Created missing user: ${userData.username} (${userData.userId})`);
+      }
+    }
+  });
+  
   socket.on('joinGame', ({ userId, gameId, position }) => {
     console.log(`Join game request: User ${userId} trying to join game ${gameId} at position ${position}`);
     
+    // Check if user exists or create it from the data provided
     if (!users[userId]) {
-      console.log(`User ${userId} not found`);
+      console.log(`User ${userId} not found, cannot join game`);
       return socket.emit('error', 'Invalid user');
     }
     

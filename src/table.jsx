@@ -23,11 +23,11 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
     // Initialize game state if provided
     useEffect(() => {
         if (initialGameState) {
-            setDeck(initialGameState.deck);
-            setPlayers(initialGameState.players);
-            setCurrentTurn(initialGameState.currentTurn);
-            setMoveCount(initialGameState.moveCount);
-            setCall(initialGameState.call);
+            setDeck(initialGameState.deck || initialDeck);
+            setPlayers(initialGameState.players || { plyr1: [], plyr2: [], plyr3: [], plyr4: [], board: [] });
+            setCurrentTurn(initialGameState.currentTurn || 'plyr1');
+            setMoveCount(initialGameState.moveCount || 0);
+            setCall(initialGameState.call || null);
             setBoardVisible(true);
             setCollectedCards(initialGameState.collectedCards);
             setDealVisible(initialGameState.dealVisible);

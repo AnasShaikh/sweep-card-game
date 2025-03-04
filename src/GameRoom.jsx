@@ -15,6 +15,13 @@ const GameRoom = ({ user }) => {
   useEffect(() => {
     // Initialize socket connection
     const newSocket = io();
+    
+    // Authenticate socket with user data
+    if (user) {
+      newSocket.emit('authenticate', user);
+      console.log(`Authenticating socket as ${user.username} (${user.id})`);
+    }
+    
     setSocket(newSocket);
     
     // Fetch game details
