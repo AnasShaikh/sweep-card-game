@@ -58,6 +58,7 @@ const GameRoom = ({ user }) => {
       return setError('Position already taken');
     }
     
+    console.log(`Joining game ${gameId} as ${user.username} (${user.id}) at position ${pos}`);
     socket.emit('joinGame', {
       userId: user.id,
       gameId,

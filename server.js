@@ -114,12 +114,21 @@ io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
   
   socket.on('joinGame', ({ userId, gameId, position }) => {
-    if (!users[userId] || !games[gameId]) {
-      return socket.emit('error', 'Invalid user or game');
+    console.log(`Join game request: User ${userId} trying to join game ${gameId} at position ${position}`);
+    
+    if (!users[userId]) {
+      console.log(`User ${userId} not found`);
+      return socket.emit('error', 'Invalid user');
+    }
+    
+    if (!games[gameId]) {
+      console.log(`Game ${gameId} not found`);
+      return socket.emit('error', 'Game not found');
     }
     
     // Check if position is available
     if (games[gameId].players[position]) {
+      console.log(`Position ${position} already taken`);
       return socket.emit('error', 'Position already taken');
     }
     
@@ -127,6 +136,8 @@ io.on('connection', (socket) => {
     games[gameId].players[position] = userId;
     games[gameId].playerNames[position] = users[userId].username;
     users[userId].currentGame = gameId;
+    
+    console.log(`User ${users[userId].username} joined game ${gameId} at position ${position}`);
     
     // Join the socket room for this game
     socket.join(gameId);

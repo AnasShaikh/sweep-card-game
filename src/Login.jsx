@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 
 const Login = ({ onLogin }) => {
@@ -8,14 +7,9 @@ const Login = ({ onLogin }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!username.trim()) {
-      return setError('Username is required');
-    }
-    
-    setLoading(true);
     setError('');
-    
+    setLoading(true);
+
     try {
       const response = await fetch('/api/login', {
         method: 'POST',
@@ -23,17 +17,22 @@ const Login = ({ onLogin }) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ username }),
+        credentials: 'include' // Important for cookies/session
       });
-      
+
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.error || 'Login failed');
       }
-      
+
+      console.log("Login successful:", data);
+
+      // Store user in localStorage for persistence
       localStorage.setItem('user', JSON.stringify(data));
       onLogin(data);
     } catch (err) {
+      console.error("Login error:", err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -42,22 +41,22 @@ const Login = ({ onLogin }) => {
 
   return (
     <div className="login-container">
-      <h2>Seep Saap Soop</h2>
+      <h2>Welcome to Seep Card Game</h2>
       <form onSubmit={handleSubmit} className="login-form">
         <div className="form-group">
-          <label htmlFor="username">Enter your username:</label>
+          <label htmlFor="username">Username</label>
           <input
             type="text"
             id="username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            placeholder="Username"
-            disabled={loading}
+            placeholder="Enter your username"
+            required
           />
         </div>
         {error && <div className="error-message">{error}</div>}
         <button type="submit" disabled={loading}>
-          {loading ? 'Loading...' : 'Join Game'}
+          {loading ? 'Logging in...' : 'Login'}
         </button>
       </form>
     </div>
