@@ -170,6 +170,12 @@ io.on('connection', (socket) => {
     
     // Broadcast updated game state to all players
     io.to(gameId).emit('gameUpdate', games[gameId]);
+    
+    // Notify everyone in the room that a player has joined
+    io.to(gameId).emit('playerJoined', {
+      username: users[userId].username,
+      position: position
+    });
   });
   
   socket.on('startGame', ({ userId, gameId }) => {

@@ -369,3 +369,17 @@ button:hover {
   gap: 10px;
   margin-top: 15px;
 }
+
+.my-turn {
+  color: #e67e22;
+  font-weight: bold;
+  background-color: #fef9e7;
+  padding: 5px;
+  border-radius: 4px;
+  animation: pulsate 1.5s infinite alternate;
+}
+
+@keyframes pulsate {
+  0% { opacity: 0.8; }
+  100% { opacity: 1; }
+}

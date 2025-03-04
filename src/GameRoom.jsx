@@ -49,11 +49,21 @@ const GameRoom = ({ user }) => {
     
     // Socket event listeners
     newSocket.on('gameUpdate', (updatedGame) => {
+      console.log('Received game update:', updatedGame);
       setGame(updatedGame);
     });
     
     newSocket.on('gameStarted', (startedGame) => {
+      console.log('Game started:', startedGame);
       setGame(startedGame);
+      
+      // Ensure we have the correct position for the current user
+      for (const [pos, userId] of Object.entries(startedGame.players)) {
+        if (userId === user.id) {
+          setPosition(pos);
+          console.log(`Setting position to ${pos} for user ${user.id}`);
+        }
+      }
     });
     
     newSocket.on('error', (errorMsg) => {
@@ -155,6 +165,20 @@ const GameRoom = ({ user }) => {
   }
   
   // If game is in progress
+  
+  // Find user's position if it's not set yet
+  useEffect(() => {
+    if (game && game.status === 'playing' && !position) {
+      for (const [pos, userId] of Object.entries(game.players)) {
+        if (userId === user.id) {
+          console.log(`Setting position to ${pos} for user ${user.id} in game view`);
+          setPosition(pos);
+          break;
+        }
+      }
+    }
+  }, [game, user, position]);
+  
   return (
     <div className="game-room">
       <Table 
