@@ -17,9 +17,14 @@ const GameRoom = ({ user }) => {
     const newSocket = io();
     
     // Authenticate socket with user data
-    if (user) {
-      newSocket.emit('authenticate', user);
+    if (user && user.id) {
+      newSocket.emit('authenticate', {
+        userId: user.id,
+        username: user.username
+      });
       console.log(`Authenticating socket as ${user.username} (${user.id})`);
+    } else {
+      console.warn('Cannot authenticate socket - user or user ID missing');
     }
     
     setSocket(newSocket);
