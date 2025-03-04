@@ -28,9 +28,18 @@ const Login = ({ onLogin }) => {
 
       console.log("Login successful:", data);
 
+      // Make sure we have a valid userId in the response
+      if (!data.userId) {
+        throw new Error('Invalid user data received from server');
+      }
+
       // Store user in localStorage for persistence
-      localStorage.setItem('user', JSON.stringify(data));
-      onLogin(data);
+      const userData = {
+        id: data.userId,
+        username: data.username
+      };
+      localStorage.setItem('user', JSON.stringify(userData));
+      onLogin(userData);
     } catch (err) {
       console.error("Login error:", err);
       setError(err.message);

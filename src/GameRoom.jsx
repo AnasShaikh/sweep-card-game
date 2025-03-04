@@ -65,6 +65,11 @@ const GameRoom = ({ user }) => {
       return setError('Position already taken');
     }
     
+    // Make sure we have a valid user
+    if (!user || !user.id) {
+      return setError('User not authenticated. Please log in again.');
+    }
+    
     console.log(`Joining game ${gameId} as ${user.username} (${user.id}) at position ${pos}`);
     socket.emit('joinGame', {
       userId: user.id,

@@ -135,10 +135,16 @@ io.on('connection', (socket) => {
   socket.on('joinGame', ({ userId, gameId, position }) => {
     console.log(`Join game request: User ${userId} trying to join game ${gameId} at position ${position}`);
     
-    // Check if user exists or create it from the data provided
+    // Use socket's authenticated userId if available and userId doesn't exist
+    if (!users[userId] && socket.userId && users[socket.userId]) {
+      console.log(`User ${userId} not found, using socket's authenticated user ${socket.userId} instead`);
+      userId = socket.userId;
+    }
+    
+    // Final check if user exists
     if (!users[userId]) {
-      console.log(`User ${userId} not found, cannot join game`);
-      return socket.emit('error', 'Invalid user');
+      console.log(`User ${userId} not found and no authenticated user available`);
+      return socket.emit('error', 'Invalid user - please log in again');
     }
     
     if (!games[gameId]) {

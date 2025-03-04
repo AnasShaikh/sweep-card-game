@@ -17,7 +17,14 @@ export default function App() {
       try {
         const userData = JSON.parse(storedUser);
         console.log("Loaded user from localStorage:", userData);
-        setUser(userData);
+        
+        // Ensure the user object has the correct structure (id and username)
+        const validatedUser = {
+          id: userData.id || userData.userId,
+          username: userData.username
+        };
+        
+        setUser(validatedUser);
       } catch (err) {
         console.error("Error parsing stored user data:", err);
         localStorage.removeItem('user');
