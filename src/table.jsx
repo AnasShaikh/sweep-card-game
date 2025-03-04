@@ -408,17 +408,19 @@ export default function Table() {
                 <h4>Team 1 (Player 1 & 3) Points: {team1Points + calculatePoints([...collectedCards.plyr1, ...collectedCards.plyr3])}</h4>
                 <h4>Team 2 (Player 2 & 4) Points: {team2Points + calculatePoints([...collectedCards.plyr2, ...collectedCards.plyr4])}</h4>
             </div>
+            
             <div className='playerArea' id='board'>
                 <h3>Board</h3>
                 <div className="cardDivBoard">
                     {boardVisible ? renderBoardCards() : <div>Cards Hidden</div>}
                 </div>
             </div>
+            
             <div className='playerArea' id='plyr1'>
-                <h3>Player 1</h3>
+                <h3>Player 1 {currentTurn === 'plyr1' ? '(Current Turn)' : ''}</h3>
                 <div className="cardDivPlay">
                     {currentTurn === 'plyr1' ? renderHandCards() : players.plyr1.map((card, cardIndex) => (
-                        <div className='handCard'  key={cardIndex}><img src={`/cards/${formatCardName(card)}.svg`} alt={card} className="cardImage" /></div>
+                        <div className='handCard' key={cardIndex}><img src={`/cards/${formatCardName(card)}.svg`} alt={card} className="cardImage" /></div>
                     ))}
                 </div>
                 <div className="collectedCards">
@@ -432,11 +434,12 @@ export default function Table() {
                     </div>
                 </div>
             </div>
+            
             <div className='playerArea' id='plyr2'>
-                <h3>Player 2</h3>
+                <h3>Player 2 {currentTurn === 'plyr2' ? '(Current Turn)' : ''}</h3>
                 <div className="cardDivPlay">
                     {currentTurn === 'plyr2' ? renderHandCards() : players.plyr2.map((card, cardIndex) => (
-                        <div  className='handCard' key={cardIndex}><img src={`/cards/${formatCardName(card)}.svg`} alt={card} className="cardImage" /></div>
+                        <div className='handCard' key={cardIndex}><img src={`/cards/${formatCardName(card)}.svg`} alt={card} className="cardImage" /></div>
                     ))}
                 </div>
                 <div className="collectedCards">
@@ -450,11 +453,12 @@ export default function Table() {
                     </div>
                 </div>
             </div>
+            
             <div className='playerArea' id='plyr3'>
-                <h3>Player 3</h3>
+                <h3>Player 3 {currentTurn === 'plyr3' ? '(Current Turn)' : ''}</h3>
                 <div className="cardDivPlay">
                     {currentTurn === 'plyr3' ? renderHandCards() : players.plyr3.map((card, cardIndex) => (
-                        <div  className='handCard' key={cardIndex}><img src={`/cards/${formatCardName(card)}.svg`} alt={card} className="cardImage" /></div>
+                        <div className='handCard' key={cardIndex}><img src={`/cards/${formatCardName(card)}.svg`} alt={card} className="cardImage" /></div>
                     ))}
                 </div>
                 <div className="collectedCards">
@@ -468,8 +472,9 @@ export default function Table() {
                     </div>
                 </div>
             </div>
+            
             <div className='playerArea' id='plyr4'>
-                <h3>Player 4</h3>
+                <h3>Player 4 {currentTurn === 'plyr4' ? '(Current Turn)' : ''}</h3>
                 <div className="cardDivPlay">
                     {currentTurn === 'plyr4' ? renderHandCards() : players.plyr4.map((card, cardIndex) => (
                         <div className='handCard' key={cardIndex}><img src={`/cards/${formatCardName(card)}.svg`} alt={card} className="cardImage" /></div>
@@ -485,28 +490,35 @@ export default function Table() {
                         ))}
                     </div>
                 </div>
-            </div>  
-            {dealVisible && <button onClick={dealCards}>Deal</button>}
-            {showDRCButton && <button onClick={dealRemainingCards}>DRC Button</button>}
-            {moveCount === 1 && currentTurn === 'plyr1' && !call && (
-                <div>
-                    <h4>Player 1, make your call:</h4>
-                    {checkValidCalls().map(num => (
-                        <button key={num} onClick={() => handleCall(num)}>
-                            Call {num}
-                        </button>
-                    ))}
-                </div>
-            )}
-            {call && (
-                <div>
-                    <h4>{`Player ${currentTurn.slice(-1)}, choose your action:`}</h4>
-                    <p>Select a card from your hand, then select cards from the table to pick up.</p>
-                    <button onClick={handlePickup}>Confirm Pickup</button>
-                    <button onClick={confirmStack}>Confirm Stack</button>
-                    <button onClick={handleThrowAway}>Throw Away</button>
-                </div>
-            )}
+            </div>
+            
+            <div className="controls">
+                {dealVisible && <button onClick={dealCards}>Deal Cards</button>}
+                {showDRCButton && <button onClick={dealRemainingCards}>Deal Remaining Cards</button>}
+                
+                {moveCount === 1 && currentTurn === 'plyr1' && !call && (
+                    <div>
+                        <h4>Player 1, make your call:</h4>
+                        {checkValidCalls().map(num => (
+                            <button key={num} onClick={() => handleCall(num)}>
+                                Call {num}
+                            </button>
+                        ))}
+                    </div>
+                )}
+                
+                {call && (
+                    <div>
+                        <h4>{`Player ${currentTurn.slice(-1)}, choose your action:`}</h4>
+                        <p>Select a card from your hand, then select cards from the table.</p>
+                        <div>
+                            <button onClick={handlePickup}>Confirm Pickup</button>
+                            <button onClick={confirmStack}>Confirm Stack</button>
+                            <button onClick={handleThrowAway}>Throw Away</button>
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
     );
 }
