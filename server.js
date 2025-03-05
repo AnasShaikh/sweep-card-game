@@ -168,8 +168,17 @@ io.on('connection', (socket) => {
     // Join the socket room for this game
     socket.join(gameId);
     
-    // Broadcast updated game state to all players
-    io.to(gameId).emit('gameUpdate', games[gameId]);
+    // Check if all 4 players have joined
+    const playerCount = Object.values(games[gameId].players).filter(Boolean).length;
+    if (playerCount === 4 && games[gameId].status === 'waiting') {
+      // Start the game automatically
+      games[gameId].status = 'playing';
+      console.log(`All 4 players joined game ${gameId}. Starting automatically.`);
+      io.to(gameId).emit('gameStarted', games[gameId]);
+    } else {
+      // Broadcast updated game state to all players
+      io.to(gameId).emit('gameUpdate', games[gameId]);
+    }
   });
   
   socket.on('startGame', ({ userId, gameId }) => {

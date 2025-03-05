@@ -138,13 +138,18 @@ const GameRoom = ({ user }) => {
         </div>
         
         <div className="game-actions">
-          {user.id === game.creator && (
+          {user.id === game.creator && Object.values(game.players).filter(Boolean).length < 4 && (
             <button 
               onClick={startGame}
               disabled={Object.values(game.players).filter(Boolean).length < 2}
             >
               Start Game
             </button>
+          )}
+          {Object.values(game.players).filter(Boolean).length === 4 && (
+            <div className="waiting-message">
+              All players joined! Game starting...
+            </div>
           )}
           <button onClick={backToLobby}>
             Back to Lobby
