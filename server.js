@@ -173,6 +173,17 @@ io.on('connection', (socket) => {
     if (playerCount === 4 && games[gameId].status === 'waiting') {
       // Start the game automatically
       games[gameId].status = 'playing';
+      
+      // Initialize basic game state if needed
+      if (!games[gameId].gameState) {
+        games[gameId].gameState = {
+          currentTurn: 'plyr1',
+          moveCount: 0,
+          dealVisible: true,
+          collectedCards: { plyr1: [], plyr2: [], plyr3: [], plyr4: [] }
+        };
+      }
+      
       console.log(`All 4 players joined game ${gameId}. Starting automatically.`);
       io.to(gameId).emit('gameStarted', games[gameId]);
     } else {

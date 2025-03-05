@@ -53,7 +53,18 @@ const GameRoom = ({ user }) => {
     });
     
     newSocket.on('gameStarted', (startedGame) => {
+      console.log('Game started event received:', startedGame);
       setGame(startedGame);
+      
+      // Make sure position is set correctly when game starts
+      if (user && user.id) {
+        for (const [pos, playerId] of Object.entries(startedGame.players)) {
+          if (playerId === user.id) {
+            setPosition(pos);
+            break;
+          }
+        }
+      }
     });
     
     newSocket.on('error', (errorMsg) => {
