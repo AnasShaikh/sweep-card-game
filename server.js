@@ -168,12 +168,30 @@ io.on('connection', (socket) => {
     // Join the socket room for this game
     socket.join(gameId);
     
-    // Check if all 4 players have joined
+    // Check if all players have joined (3 or 4)
     const playerCount = Object.values(games[gameId].players).filter(Boolean).length;
-    if (playerCount === 4 && games[gameId].status === 'waiting') {
+    if ((playerCount >= 3) && games[gameId].status === 'waiting') {
       // Start the game automatically
       games[gameId].status = 'playing';
-      console.log(`All 4 players joined game ${gameId}. Starting automatically.`);
+      console.log(`${playerCount} players joined game ${gameId}. Starting automatically.`);
+      
+      // Initialize basic game state if it doesn't exist
+      if (!games[gameId].gameState) {
+        games[gameId].gameState = {
+          currentTurn: 'plyr1',
+          moveCount: 0,
+          dealVisible: true,
+          remainingCardsDealt: false,
+          collectedCards: { plyr1: [], plyr2: [], plyr3: [], plyr4: [] },
+          team1Points: 0,
+          team2Points: 0,
+          team1SeepCount: 0,
+          team2SeepCount: 0,
+          showDRCButton: false
+        };
+      }
+      
+      // Broadcast to all clients including the sender
       io.to(gameId).emit('gameStarted', games[gameId]);
     } else {
       // Broadcast updated game state to all players
