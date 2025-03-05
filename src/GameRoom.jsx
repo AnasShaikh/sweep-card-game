@@ -49,22 +49,11 @@ const GameRoom = ({ user }) => {
     
     // Socket event listeners
     newSocket.on('gameUpdate', (updatedGame) => {
-      console.log('Game update received:', updatedGame);
       setGame(updatedGame);
     });
     
     newSocket.on('gameStarted', (startedGame) => {
-      console.log('Game started event received:', startedGame);
       setGame(startedGame);
-      // Force position update to ensure correct UI
-      if (user && user.id) {
-        for (const [pos, playerId] of Object.entries(startedGame.players)) {
-          if (playerId === user.id) {
-            setPosition(pos);
-            break;
-          }
-        }
-      }
     });
     
     newSocket.on('error', (errorMsg) => {

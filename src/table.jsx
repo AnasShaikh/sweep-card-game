@@ -12,7 +12,7 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
     const [selectedHandCard, setSelectedHandCard] = useState(null);
     const [selectedTableCards, setSelectedTableCards] = useState([]);
     const [collectedCards, setCollectedCards] = useState({ plyr1: [], plyr2: [], plyr3: [], plyr4: [] });
-    const [dealVisible, setDealVisible] = useState(initialGameState?.dealVisible !== false);
+    const [dealVisible, setDealVisible] = useState(true);
     const [remainingCardsDealt, setRemainingCardsDealt] = useState(false);
     const [showDRCButton, setShowDRCButton] = useState(false);
     const [team1SeepCount, setTeam1SeepCount] = useState(0);
@@ -22,11 +22,10 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
     
     // Initialize game state if provided
     useEffect(() => {
-        console.log('Table component initializing with game state:', initialGameState);
-        // Always initialize with default values for elements that might be missing
-        setDeck(initialGameState?.deck || initialDeck);
-        setPlayers(initialGameState?.players || { plyr1: [], plyr2: [], plyr3: [], plyr4: [], board: [] });
-        setCurrentTurn(initialGameState?.currentTurn || 'plyr1');
+        if (initialGameState) {
+            setDeck(initialGameState.deck || initialDeck);
+            setPlayers(initialGameState.players || { plyr1: [], plyr2: [], plyr3: [], plyr4: [], board: [] });
+            setCurrentTurn(initialGameState.currentTurn || 'plyr1');
             setMoveCount(initialGameState.moveCount || 0);
             setCall(initialGameState.call || null);
             setBoardVisible(true);
