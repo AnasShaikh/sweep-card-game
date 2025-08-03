@@ -1,0 +1,86 @@
+Here is a plain-language summary of the rules for Seep (also called Sweep) based on the conversation above:
+
+1. Basic Setup
+1. Players and Teams
+    * There are 4 players, split into 2 teams of 2.
+    * Teammates sit opposite each other.
+2. Dealing Cards
+    * The dealer gives out 4 cards to each player plus 4 cards on the table (face down).
+    * The player to the dealer’s right takes the first turn.
+3. Dealer’s Significance
+    * The dealer can look at all their cards before playing.
+    * Other players only see their first 4 cards initially.
+    * The deal rotates to the right after each game, so a new player becomes the dealer next time.
+
+2. Starting the Game
+1. First Call
+    * On the first turn, the player to the dealer’s right calls a number between 9 and 13.
+    * This player must have at least one card with a value 9 or higher; otherwise, the cards are reshuffled and redealt.
+2. Revealing the Table Cards
+    * As soon as the first call is made, the 4 table cards are turned face up (uncovered).
+
+3. Card Values & Points
+1. Spades
+    * All spade cards are worth points equal to their number (e.g., 8 of spades = 8 points, Jack of spades = 11, Queen = 12, King = 13).
+2. Aces
+    * Aces (of any suit) are worth 1 point each.
+3. 10 of Diamonds
+    * The 10 of diamonds is worth 6 points.
+4. Other Cards
+    * All other cards do not contribute to the final score.
+
+4. Turn-by-Turn Play
+On a player’s turn, they have three main options:
+1. Create a Stack
+    * Combine one of your cards with one or more cards on the table to reach the called number (for example, if the call is 11, you can use a 9 from your hand and a 2 on the table to make a stack of 11).
+    * Once created, that stack is associated with the value (e.g., 11).
+2. Pick Up (Collect) Cards
+    * If you have a card that exactly matches a single card or a stack value on the table (e.g., if the table has a stack of 11 and you hold an 11), you can pick it up.
+    * You keep those cards in your “collected” pile for scoring if they are spades, aces, or 10 of diamonds.
+3. Throw a Card
+    * Simply place a card from your hand onto the table without creating or picking up a stack.
+    * Often done if you can’t (or don’t want to) create or pick up.
+Special Stacking Notes
+* You can add to an existing stack if you can form a new valid total (for example, if a stack is 9 and you add an Ace to make it 10, provided you hold a 10 to claim it later).
+* You can stack on your own stack if you have the right cards to eventually pick it up.
+* If your teammate created the stack, sometimes you can help modify it, but rules require you or your teammate to hold the matching card to pick it up later.
+
+5. Sweeps
+1. Definition
+    * A sweep means you clear all cards from the table in one move.
+    * This can happen if, for instance, there’s a single 5 on the table and you play a 5 to pick it up, or if you combine several cards on the table to match your played card’s total and end up removing all table cards.
+2. Sweep Points
+    * Each sweep is worth 50 points for your team.
+3. Sweep Limit and Cancellation
+    * Each team can only hold two sweeps at a time (max 100 points from sweeps).
+    * If you attempt a third sweep, it cancels one of your previous sweeps, meaning you drop back down to one.
+    * If the opposing team sweeps, it cancels one of your team’s sweeps (if you had any), reducing your total sweeps by one.
+
+6. Rounds and Scoring
+1. Rounds
+    * Each player keeps taking turns in clockwise order (the person to the dealer’s right goes first, then next, and so on).
+    * After everyone has played their cards, the dealer gets the final move.
+2. Collecting Remaining Cards
+    * If you pick up cards from the table on your last move, and some cards still remain, the last player who successfully picked up cards takes all leftover cards on the table.
+3. Points Calculation
+    * At the end of the round, only spades, aces, and the 10 of diamonds matter for scoring.
+    * Add up the values of all spade cards, add 1 point per Ace (any suit), plus 6 points for each 10 of diamonds collected.
+    * Add any sweep points (50 points per valid sweep) to your total.
+
+7. Dealer Rotation
+* In the next round (or next game), the player to the right of the current dealer becomes the new dealer.
+
+Quick Example
+1. First Player’s Call: 11
+2. Player’s Hand: 4 of clubs, 9 of diamonds, 10 of spades, Jack of hearts (Jack is 11).
+3. Table Cards (uncovered): 2 of hearts, Queen of spades (12 of spades), 8 of hearts, 9 of diamonds.
+4. Possible Move: Use 9 of diamonds (in hand) + 2 of hearts (on table) to create a stack of 11.
+5. Alternate Move: Use Jack (value 11) to pick up or create a stack.
+
+That’s it in simple terms! The most important aspects are:
+* Calling a number (9–13).
+* Making stacks and picking up with matching cards.
+* Sweeping the table for 50 points.
+* Counting only spades, aces, and 10 of diamonds for final scores.
+* Keeping track of sweeps and the limit of two sweeps per team.
+Hope this helps clarify the game of Seep (or Sweep) in straightforward language!
