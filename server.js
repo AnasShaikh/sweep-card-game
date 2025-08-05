@@ -1,4 +1,3 @@
-
 import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
@@ -25,7 +24,7 @@ app.use(session({
 app.use(express.json());
 app.use(express.static('dist'));
 
-// In-memory storage for users and games
+// In-memory storage
 const users = {};
 const games = {};
 
@@ -37,7 +36,6 @@ app.post('/api/login', (req, res) => {
     return res.status(400).json({ error: 'Username is required' });
   }
   
-  // Simple login - just store the username
   const userId = uuidv4();
   users[userId] = { 
     id: userId, 
@@ -61,13 +59,13 @@ app.post('/api/games', (req, res) => {
     id: gameId,
     creator: userId,
     players: {
-      plyr1: userId,
+      plyr1: userId, // Creator automatically joins as plyr1
       plyr2: null,
       plyr3: null,
       plyr4: null
     },
     playerNames: {
-      plyr1: users[userId].username,
+      plyr1: users[userId].username, // Set creator's name
       plyr2: null,
       plyr3: null,
       plyr4: null
@@ -86,7 +84,7 @@ app.get('/api/games', (req, res) => {
     .filter(game => game.status === 'waiting')
     .map(game => ({
       id: game.id,
-      creator: users[game.creator].username,
+      creator: users[game.creator]?.username || 'Unknown',
       players: Object.values(game.playerNames).filter(Boolean).length,
       maxPlayers: 4
     }));
@@ -113,48 +111,46 @@ app.get('*', (req, res) => {
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
   
-  // Store user authentication on socket connection
   socket.on('authenticate', (userData) => {
-    if (userData && userData.userId) {
-      // Store the user info on the socket
+    if (userData?.userId) {
       socket.userId = userData.userId;
       console.log(`Socket ${socket.id} authenticated as user ${userData.userId}`);
       
-      // Create user if doesn't exist (in case of page refresh or new tab)
+      // Ensure user exists
       if (!users[userData.userId]) {
         users[userData.userId] = { 
           id: userData.userId, 
           username: userData.username, 
           currentGame: null 
         };
-        console.log(`Created missing user: ${userData.username} (${userData.userId})`);
       }
     }
   });
   
-  socket.on('joinGame', ({ userId, gameId, position }) => {
-    console.log(`Join game request: User ${userId} trying to join game ${gameId} at position ${position}`);
+  socket.on('joinRoom', ({ gameId, userId }) => {
+    console.log(`User ${userId} trying to join room ${gameId}`);
     
-    // Use socket's authenticated userId if available and userId doesn't exist
-    if (!users[userId] && socket.userId && users[socket.userId]) {
-      console.log(`User ${userId} not found, using socket's authenticated user ${socket.userId} instead`);
-      userId = socket.userId;
-    }
-    
-    // Final check if user exists
-    if (!users[userId]) {
-      console.log(`User ${userId} not found and no authenticated user available`);
-      return socket.emit('error', 'Invalid user - please log in again');
-    }
-    
-    if (!games[gameId]) {
+    if (games[gameId]) {
+      socket.join(gameId);
+      console.log(`Socket ${socket.id} (user: ${userId}) successfully joined room ${gameId}`);
+      
+      // Send current game state to the user who just joined the room
+      socket.emit('gameUpdate', games[gameId]);
+      console.log(`Sent game state to user ${userId}:`, games[gameId]);
+    } else {
       console.log(`Game ${gameId} not found`);
-      return socket.emit('error', 'Game not found');
+    }
+  });
+  
+  socket.on('joinGame', ({ userId, gameId, position }) => {
+    console.log(`Join game: ${userId} -> ${gameId} at ${position}`);
+    
+    // Validate
+    if (!users[userId] || !games[gameId]) {
+      return socket.emit('error', 'Invalid user or game');
     }
     
-    // Check if position is available
     if (games[gameId].players[position]) {
-      console.log(`Position ${position} already taken`);
       return socket.emit('error', 'Position already taken');
     }
     
@@ -163,41 +159,39 @@ io.on('connection', (socket) => {
     games[gameId].playerNames[position] = users[userId].username;
     users[userId].currentGame = gameId;
     
-    console.log(`User ${users[userId].username} joined game ${gameId} at position ${position}`);
+    console.log(`${users[userId].username} joined ${gameId} at ${position}`);
     
-    // Join the socket room for this game
-    socket.join(gameId);
-    
-    // Check if all 4 players have joined
-    const playerCount = Object.values(games[gameId].players).filter(Boolean).length;
-    if (playerCount === 4 && games[gameId].status === 'waiting') {
-      // Start the game automatically
-      games[gameId].status = 'playing';
-      
-      // Initialize basic game state if needed
-      if (!games[gameId].gameState) {
-        games[gameId].gameState = {
-          currentTurn: 'plyr1',
-          moveCount: 0,
-          dealVisible: true,
-          collectedCards: { plyr1: [], plyr2: [], plyr3: [], plyr4: [] }
-        };
-      }
-      
-      console.log(`All 4 players joined game ${gameId}. Starting automatically.`);
-      io.to(gameId).emit('gameStarted', games[gameId]);
-    } else {
-      // Broadcast updated game state to all players
-      io.to(gameId).emit('gameUpdate', games[gameId]);
-    }
+    // Broadcast update to ALL players in the room (including the one who just joined)
+    io.to(gameId).emit('gameUpdate', games[gameId]);
   });
   
   socket.on('startGame', ({ userId, gameId }) => {
-    if (!users[userId] || !games[gameId] || games[gameId].creator !== userId) {
-      return socket.emit('error', 'Not authorized to start game');
+    console.log(`Start game: ${userId} -> ${gameId}`);
+    
+    if (!users[userId] || !games[gameId]) {
+      return socket.emit('error', 'Invalid user or game');
     }
     
+    // Check if all positions filled
+    const playerCount = Object.values(games[gameId].players).filter(Boolean).length;
+    if (playerCount !== 4) {
+      return socket.emit('error', 'Need 4 players to start');
+    }
+    
+    // Start the game
     games[gameId].status = 'playing';
+    
+    // Initialize game state with plyr2 going first (opposite team of creator)
+    games[gameId].gameState = {
+      currentTurn: 'plyr2', // plyr2 starts (opposite team of plyr1 creator)
+      moveCount: 0,
+      dealVisible: true,
+      collectedCards: { plyr1: [], plyr2: [], plyr3: [], plyr4: [] }
+    };
+    
+    console.log(`Game ${gameId} started with plyr2 going first`);
+    
+    // Broadcast game start
     io.to(gameId).emit('gameStarted', games[gameId]);
   });
   
@@ -206,12 +200,12 @@ io.on('connection', (socket) => {
       return socket.emit('error', 'Invalid user or game');
     }
     
-    // Store game state
+    // Update game state
     if (action === 'updateGameState') {
       games[gameId].gameState = data;
     }
     
-    // Broadcast the action to all players in the game
+    // Broadcast to all players in the game
     socket.to(gameId).emit('gameAction', { 
       player: userId, 
       action, 

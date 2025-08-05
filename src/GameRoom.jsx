@@ -8,140 +8,98 @@ const GameRoom = ({ user }) => {
   const [game, setGame] = useState(null);
   const [socket, setSocket] = useState(null);
   const [error, setError] = useState('');
-  const [position, setPosition] = useState('');
   const navigate = useNavigate();
   
   useEffect(() => {
-    // Initialize socket connection
     const newSocket = io();
-    
-    // Authenticate socket with user data
-    if (user && user.id) {
-      newSocket.emit('authenticate', {
-        userId: user.id,
-        username: user.username
-      });
-      console.log(`Authenticating socket as ${user.username} (${user.id})`);
-    } else {
-      console.warn('Cannot authenticate socket - user or user ID missing');
-    }
-    
     setSocket(newSocket);
     
-    // Fetch game details
-    const fetchGame = async () => {
-      try {
-        const response = await fetch(`/api/games/${gameId}`);
-        const data = await response.json();
-        
-        if (!response.ok) {
-          throw new Error(data.error || 'Failed to load game');
-        }
-        
-        setGame(data);
-        
-        // Check if current user is already in the game and set their position
-        if (user && user.id) {
-          for (const [pos, playerId] of Object.entries(data.players)) {
-            if (playerId === user.id) {
-              setPosition(pos);
-              console.log(`Found existing position: ${pos} for user ${user.id}`);
-              break;
-            }
-          }
-        }
-      } catch (err) {
-        setError(err.message);
-      }
-    };
-    
-    fetchGame();
-    
-    // Socket event listeners
-    newSocket.on('gameUpdate', (updatedGame) => {
-      console.log('Game update received:', updatedGame);
-      setGame(updatedGame);
+    newSocket.on('connect', () => {
+      console.log('Socket connected:', newSocket.id);
       
-      // Update position if user joined
-      if (user && user.id) {
-        for (const [pos, playerId] of Object.entries(updatedGame.players)) {
-          if (playerId === user.id) {
-            setPosition(pos);
-            break;
-          }
-        }
-      }
+      // Authenticate socket first
+      newSocket.emit('authenticate', { userId: user.id, username: user.username });
+      
+      // Join the game room after authentication
+      newSocket.emit('joinRoom', { gameId, userId: user.id });
+      
+      console.log(`User ${user.username} attempting to join room ${gameId}`);
     });
     
-    newSocket.on('gameStarted', (startedGame) => {
-      console.log('Game started event received:', startedGame);
-      setGame(startedGame);
-      
-      // Make sure position is set correctly when game starts
-      if (user && user.id) {
-        for (const [pos, playerId] of Object.entries(startedGame.players)) {
-          if (playerId === user.id) {
-            setPosition(pos);
-            break;
-          }
-        }
-      }
-    });
+    // Define event handlers inside useEffect to avoid stale closures
+    function handleGameUpdate(updatedGame) {
+      console.log(`${user.username} received game update:`, updatedGame);
+      // Use functional update to avoid stale closure
+      setGame(prevGame => {
+        console.log(`${user.username} updating from:`, prevGame, 'to:', updatedGame);
+        return updatedGame;
+      });
+    }
     
-    newSocket.on('error', (errorMsg) => {
+    function handleGameStarted(startedGame) {
+      console.log(`${user.username} received game started:`, startedGame);
+      // Use functional update to avoid stale closure
+      setGame(prevGame => {
+        console.log(`${user.username} game started, updating from:`, prevGame, 'to:', startedGame);
+        return startedGame;
+      });
+    }
+    
+    function handleError(errorMsg) {
       console.error('Socket error:', errorMsg);
       setError(errorMsg);
-    });
+    }
     
+    // Register event listeners
+    newSocket.on('gameUpdate', handleGameUpdate);
+    newSocket.on('gameStarted', handleGameStarted);
+    newSocket.on('error', handleError);
+    
+    // Load initial game state
+    loadGame();
+    
+    // Cleanup function
     return () => {
+      newSocket.off('gameUpdate', handleGameUpdate);
+      newSocket.off('gameStarted', handleGameStarted);
+      newSocket.off('error', handleError);
       newSocket.disconnect();
     };
-  }, [gameId, user]);
+  }, [gameId, user.id, user.username]); // Only depend on values that won't change frequently
   
-  const joinPosition = (pos) => {
-    // Check if position is already taken
-    if (game.players[pos]) {
-      return setError('Position already taken');
+  const loadGame = async () => {
+    try {
+      const response = await fetch(`/api/games/${gameId}`);
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error);
+      console.log('Game loaded:', data);
+      setGame(data);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+  
+  const joinGame = () => {
+    if (!game || !socket) return;
+    
+    // Find first available position
+    const availablePosition = ['plyr1', 'plyr2', 'plyr3', 'plyr4']
+      .find(pos => !game.players[pos]);
+    
+    if (!availablePosition) {
+      setError('Game is full');
+      return;
     }
     
-    // Check if user is already in another position
-    if (position) {
-      return setError('You are already in the game');
-    }
-    
-    // Make sure we have a valid user
-    if (!user || !user.id) {
-      return setError('User not authenticated. Please log in again.');
-    }
-    
-    console.log(`Joining game ${gameId} as ${user.username} (${user.id}) at position ${pos}`);
     socket.emit('joinGame', {
       userId: user.id,
       gameId,
-      position: pos
+      position: availablePosition
     });
-    
-    // Optimistically set position
-    setPosition(pos);
   };
   
   const startGame = () => {
-    if (!user || !user.id) {
-      return setError('User not authenticated');
-    }
-    
-    // Check if user is the creator
-    if (user.id !== game.creator) {
-      return setError('Only the game creator can start the game');
-    }
-    
-    // Count actual players
-    const playerCount = Object.values(game.players).filter(Boolean).length;
-    console.log(`Starting game with ${playerCount} players`);
-    
-    if (playerCount < 2) {
-      return setError('Need at least 2 players to start');
-    }
+    if (!socket) return;
     
     socket.emit('startGame', {
       userId: user.id,
@@ -149,113 +107,121 @@ const GameRoom = ({ user }) => {
     });
   };
   
-  const handleGameAction = (action, data) => {
-    socket.emit('gameAction', {
-      userId: user.id,
-      gameId,
-      action,
-      data
-    });
+  const getUserPosition = () => {
+    if (!game) return null;
+    return Object.entries(game.players)
+      .find(([pos, playerId]) => playerId === user.id)?.[0] || null;
   };
   
-  const backToLobby = () => {
-    navigate('/lobby');
+  const isUserInGame = () => {
+    if (!game) return false;
+    return Object.values(game.players).includes(user.id);
+  };
+  
+  const getPlayerCount = () => {
+    if (!game) return 0;
+    return Object.values(game.players).filter(Boolean).length;
+  };
+  
+  const canStartGame = () => {
+    return getPlayerCount() === 4;
   };
   
   if (!game) {
     return <div className="loading">Loading game...</div>;
   }
   
-  // If game is waiting for players
-  if (game.status === 'waiting') {
-    const playerCount = Object.values(game.players).filter(Boolean).length;
-    const isCreator = user.id === game.creator;
+  // Show table if game is playing
+  if (game.status === 'playing') {
+    const userPosition = getUserPosition();
     
-    return (
-      <div className="game-room">
-        <h2>Game Room</h2>
-        <div className="game-info">
-          <p>Game ID: {gameId}</p>
-          <p>Created by: {game.playerNames?.plyr1 || 'Unknown'}</p>
-          <p>Players: {playerCount}/4</p>
-        </div>
-        
-        {error && <div className="error-message">{error}</div>}
-        
-        <div className="players-list">
-          <h3>Players</h3>
-          <div className="player-positions">
-            {['plyr1', 'plyr2', 'plyr3', 'plyr4'].map((pos) => {
-              const isOccupied = game.players[pos];
-              const isMyPosition = position === pos;
-              const playerName = game.playerNames?.[pos];
-              
-              return (
-                <div key={pos} className="player-slot">
-                  <span>
-                    {pos}: {playerName || 'Open'}
-                    {isMyPosition && ' (You)'}
-                  </span>
-                  {!isOccupied && !position && (
-                    <button onClick={() => joinPosition(pos)}>
-                      Take Seat
-                    </button>
-                  )}
-                  {isOccupied && !isMyPosition && (
-                    <span style={{color: 'green'}}>Occupied</span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-        
-        <div className="game-actions">
-          {isCreator && (
-            <button 
-              onClick={startGame}
-              disabled={playerCount < 2}
-              title={playerCount < 2 ? 'Need at least 2 players' : 'Start the game'}
-            >
-              Start Game ({playerCount}/4 players)
-            </button>
-          )}
-          
-          {!isCreator && playerCount < 4 && (
-            <div className="waiting-message">
-              Waiting for game creator to start the game...
-            </div>
-          )}
-          
-          {playerCount === 4 && !isCreator && (
-            <div className="waiting-message">
-              All players joined! Waiting for host to start...
-            </div>
-          )}
-          
-          <button onClick={backToLobby} className="back-btn">
+    if (!userPosition) {
+      return (
+        <div className="game-room">
+          <h2>Game In Progress</h2>
+          <p>This game has already started.</p>
+          <button onClick={() => navigate('/lobby')} className="back-btn">
             Back to Lobby
           </button>
         </div>
+      );
+    }
+    
+    return (
+      <div className="game-room">
+        <Table 
+          gameId={gameId}
+          user={user}
+          position={userPosition}
+          playerNames={game.playerNames || {}}
+          socket={socket}
+          onGameAction={(action, data) => {
+            socket.emit('gameAction', { userId: user.id, gameId, action, data });
+          }}
+          initialGameState={game.gameState}
+        />
+        <button onClick={() => navigate('/lobby')} className="back-btn">
+          Back to Lobby
+        </button>
       </div>
     );
   }
   
-  // If game is in progress
+  // Show waiting room
+  const playerCount = getPlayerCount();
+  const userInGame = isUserInGame();
+  
   return (
     <div className="game-room">
-      <Table 
-        gameId={gameId}
-        user={user}
-        position={position}
-        playerNames={game.playerNames || {}}
-        socket={socket}
-        onGameAction={handleGameAction}
-        initialGameState={game.gameState}
-      />
-      <button onClick={backToLobby} className="back-btn">
-        Back to Lobby
-      </button>
+      <h2>Game Room</h2>
+      <div className="game-info">
+        <p>Game ID: {gameId}</p>
+        <p>Players: {playerCount}/4</p>
+      </div>
+      
+      {error && <div className="error-message">{error}</div>}
+      
+      <div className="players-list">
+        <h3>Players</h3>
+        <div className="player-positions">
+          {['plyr1', 'plyr2', 'plyr3', 'plyr4'].map((pos) => {
+            const playerId = game.players[pos];
+            const playerName = game.playerNames?.[pos];
+            const isMe = playerId === user.id;
+            
+            return (
+              <div key={pos} className="player-slot">
+                <strong>{pos}:</strong> {playerName || 'Empty'}
+                {isMe && ' (You)'}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      
+      <div className="game-actions">
+        {!isUserInGame() && playerCount < 4 && (
+          <button onClick={joinGame}>
+            Join Game
+          </button>
+        )}
+        
+        {isUserInGame() && playerCount < 4 && (
+          <div className="waiting-message">
+            Waiting for more players... ({playerCount}/4)
+          </div>
+        )}
+        
+        {playerCount === 4 && (
+          <button onClick={startGame}>
+            Start Game (All players ready!)
+          </button>
+        )}
+        
+        <button onClick={() => navigate('/lobby')} className="back-btn">
+          Back to Lobby
+        </button>
+      </div>
     </div>
   );
 };
