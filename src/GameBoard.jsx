@@ -220,7 +220,7 @@ export const ActionButtons = ({
     if (!isMyTurn || !gameState.call) return null;
 
     const selectedHandValue = selectedHandCard ? 
-        require('./gameLogic.js').getCardFaceValue(require('./gameLogic.js').formatCardName(selectedHandCard)) : 0;
+        require('./gameLogic.js').getCardValue(require('./gameLogic.js').formatCardName(selectedHandCard)) : 0;
 
     return (
         <div>
@@ -237,10 +237,10 @@ export const ActionButtons = ({
                     <br/>Current: {require('./gameLogic.js').getStackTotalPoints(selectedStackToAddTo)} pts, {require('./gameLogic.js').getStackCardCount(selectedStackToAddTo)} cards
                     <br/>After adding: Hand({selectedHandValue}) + Table({selectedTableCards.reduce((sum, card) => {
                         if (card.startsWith("Stack of")) return sum + require('./gameLogic.js').getStackValue(card);
-                        return sum + require('./gameLogic.js').getCardFaceValue(require('./gameLogic.js').formatCardName(card));
+                        return sum + require('./gameLogic.js').getCardValue(require('./gameLogic.js').formatCardName(card));
                     }, 0)}) = {selectedHandValue + selectedTableCards.reduce((sum, card) => {
                         if (card.startsWith("Stack of")) return sum + require('./gameLogic.js').getStackValue(card);
-                        return sum + require('./gameLogic.js').getCardFaceValue(require('./gameLogic.js').formatCardName(card));
+                        return sum + require('./gameLogic.js').getCardValue(require('./gameLogic.js').formatCardName(card));
                     }, 0)} total pts
                 </p>
             )}

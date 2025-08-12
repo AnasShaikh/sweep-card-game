@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import initialDeck from './initialDeck'; 
+import initialDeck from '../src/initialDeck'; 
 
 export default function Table({ gameId, user, position, playerNames, socket, onGameAction, initialGameState }) {
     const [deck, setDeck] = useState(initialDeck);
@@ -58,14 +58,16 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
     };
     
     // Check if stack is loose (modifiable) or tight (locked)
-    const isLooseStack = (stackString) => {
-        const stackValue = getStackValue(stackString);
-        const totalPoints = getStackTotalPoints(stackString);
-        const cardCount = getStackCardCount(stackString);
-        
-        // Tight if: 4+ cards OR double+ the base value
-        const isTight = cardCount >= 4 || totalPoints >= (stackValue * 2);
-        return !isTight;
+    const isLooseStack = (stackString, isStackingOnTop = false) => {
+    if (isStackingOnTop) return true; // Always allow stacking matching value
+    
+    const stackValue = getStackValue(stackString);
+    const totalPoints = getStackTotalPoints(stackString);
+    const cardCount = getStackCardCount(stackString);
+    
+    // Tight if: 4+ cards OR double+ the base value
+    const isTight = cardCount >= 4 || totalPoints >= (stackValue * 2);
+    return !isTight;
     };
     
     // Get creator of a stack from board
@@ -81,17 +83,8 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
         const stackValue = getStackValue(stackString);
         if (!stackValue) return false;
         
-        // Safety check - ensure players are initialized
-        if (!players[playerPos] || !Array.isArray(players[playerPos]) || players[playerPos].length === 0) {
-            return false;
-        }
-        
-        // Can't modify tight stacks (for value modification)
-        if (!isLooseStack(stackString)) {
-            // But allow if they might be able to "stack on top" 
-            // (we'll validate this properly in confirmAddToStack)
-            return true;
-        }
+        // Can't modify tight stacks
+        if (!isLooseStack(stackString)) return false;
         
         const stackCreator = getStackCreator(stackString);
         
@@ -476,7 +469,7 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
         }
     };
 
-    // FIXED VERSION: Add to existing stack logic - now handles both exact match and value modification
+    // Add to existing stack logic - now handles both exact match and value modification
     const confirmAddToStack = () => {
         if (!selectedStackToAddTo || !selectedHandCard) {
             alert("Please select one card from your hand and a stack to add to.");
@@ -485,126 +478,71 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
 
         const currentStackValue = getStackValue(selectedStackToAddTo);
         const handCardValue = getCardValue(formatCardName(selectedHandCard));
-        
-        // For adding to stack, we DON'T include the target stack in table cards value
-        // Only include other table cards that are NOT the stack we're adding to
-        const tableCardsValue = selectedTableCards
-            .filter(card => card !== selectedStackToAddTo) // Exclude the target stack
-            .reduce((sum, card) => {
-                if (card.startsWith("Stack of")) {
-                    const stackVal = getStackValue(card);
-                    return sum + stackVal;
-                }
-                return sum + getCardValue(formatCardName(card));
-            }, 0);
+        const tableCardsValue = selectedTableCards.reduce((sum, card) => {
+            if (card.startsWith("Stack of")) {
+                const stackVal = getStackValue(card);
+                return sum + stackVal;
+            }
+            return sum + getCardValue(formatCardName(card));
+        }, 0);
         
         const totalSelectedValue = handCardValue + tableCardsValue;
-        const currentStackCardCount = getStackCardCount(selectedStackToAddTo);
-        const newStackCardCount = currentStackCardCount + 1 + selectedTableCards.filter(card => card !== selectedStackToAddTo).length;
+        const newStackTotalPoints = getStackTotalPoints(selectedStackToAddTo) + totalSelectedValue;
+        const newStackCardCount = getStackCardCount(selectedStackToAddTo) + 1 + selectedTableCards.length;
 
-        // KEY FIX: Determine behavior type
-        const isStackingOnTop = totalSelectedValue === currentStackValue;
-        
+        // Check if adding would exceed 4 cards
+        if (totalSelectedValue !== currentStackValue && newStackCardCount > 4) {
+            alert(`Adding these cards would result in ${newStackCardCount} cards in the stack. Maximum is 4 cards.`);
+            return;
+        }
+
+        // Determine new stack value and validate
         let newStackValue;
         
-        if (isStackingOnTop) {
-            // BEHAVIOR 1: Stacking on top - NO card limit, maintains stack value
-            // This is ALWAYS allowed, even for tight stacks
-            console.log(`Stacking on top: adding ${totalSelectedValue} to Stack of ${currentStackValue} - maintaining value`);
-            
-            // Check team permissions for pickup requirements
-            const remainingCards = players[currentTurn].filter(card => card !== selectedHandCard);
-            const hasPickupCard = remainingCards.some(card => getCardValue(formatCardName(card)) === currentStackValue);
-            
-            if (!hasPickupCard) {
-                const stackCreator = getStackCreator(selectedStackToAddTo);
-                
-                // If it's teammate's stack, allow without pickup card (teammate can retrieve later)
-                if (stackCreator && isTeammate(stackCreator, currentTurn)) {
-                    console.log(`Teammate stacking on top without pickup card requirement`);
-                } else {
-                    // For own stack or opponent's stack or unknown creator, must have pickup card
-                    const stackOwnership = stackCreator === currentTurn ? "your own" : 
-                                         (stackCreator && isOpponent(stackCreator, currentTurn)) ? "opponent's" : "this";
-                    alert(`You need at least one ${currentStackValue} card remaining in your hand to add to ${stackOwnership} stack.`);
-                    return;
-                }
-            }
-            
+        // Check if this is exact match (maintaining current value)
+        if (totalSelectedValue === currentStackValue) {
             newStackValue = currentStackValue;
+            console.log(`Maintaining stack value ${currentStackValue}`);
         } else {
-            // BEHAVIOR 2: Value modification - check if stack allows modification
-            if (!isLooseStack(selectedStackToAddTo)) {
-                alert(`This stack is tight and cannot be modified. You can only add cards that sum exactly to ${currentStackValue} (stacking on top).`);
-                return;
-            }
-            
-            // 4 card limit applies for loose stack modifications
-            if (newStackCardCount > 4) {
-                alert(`Adding these cards would result in ${newStackCardCount} cards in the stack. Maximum is 4 cards for stack modification.`);
-                return;
-            }
-
-            // Calculate new stack value based on actual card face values in stack
-            const currentStackCards = selectedStackToAddTo.split(': ')[1] ? selectedStackToAddTo.split(': ')[1].split(' + ') : [];
-            const allExistingCardValues = currentStackCards.reduce((sum, cardName) => {
-                const trimmedCard = cardName.trim();
-                if (trimmedCard.startsWith('Stack of')) {
-                    return sum + getStackValue(trimmedCard);
-                }
-                // Use face value, not scoring value
-                return sum + getCardValue(formatCardName(trimmedCard));
-            }, 0);
-            
-            const newTotalCardValue = allExistingCardValues + totalSelectedValue;
-            
-            console.log(`DEBUG: Stack cards: ${currentStackCards.join(', ')}`);
-            console.log(`DEBUG: Existing values: ${allExistingCardValues}, Adding: ${totalSelectedValue}, New total: ${newTotalCardValue}`);
-            
-            console.log(`Value modification: existing cards total = ${allExistingCardValues}, adding ${totalSelectedValue}, new total = ${newTotalCardValue}`);
-            
-            // Find valid stack values (9-13) that the new total can form
-            const possibleValues = [9, 10, 11, 12, 13].filter(val => {
-                return newTotalCardValue >= val && newTotalCardValue % val === 0;
-            });
+            // This is value modification - new stack value is based on new total points
+            // Find valid stack value (9-13) that the new total can represent
+            const possibleValues = [9, 10, 11, 12, 13].filter(val => 
+                newStackTotalPoints >= val && newStackTotalPoints % val === 0
+            );
             
             if (possibleValues.length === 0) {
-                alert(`The new total card value (${newTotalCardValue}) cannot form a valid stack value (9-13). The total must be divisible by the stack value.`);
+                alert(`The new total points (${newStackTotalPoints}) cannot form a valid stack value (9-13).`);
                 return;
             }
             
+            // For now, use the highest possible value - could be made user-selectable
             newStackValue = Math.max(...possibleValues);
-            console.log(`Available stack values: ${possibleValues.join(', ')}, choosing: ${newStackValue}`);
+            console.log(`Modifying stack from ${currentStackValue} to ${newStackValue}`);
+        }
 
-            // Check if player has matching card for new stack value
-            const remainingCards = players[currentTurn].filter(card => card !== selectedHandCard);
-            const hasPickupCard = remainingCards.some(card => getCardValue(formatCardName(card)) === newStackValue);
+        // Check team-based permissions for the new stack value
+        const hasPickupCard = players[currentTurn]
+            .filter(card => card !== selectedHandCard)
+            .some(card => getCardValue(formatCardName(card)) === newStackValue);
             
-            if (!hasPickupCard) {
-                // Check team relationship for the stack
-                const stackCreator = getStackCreator(selectedStackToAddTo);
-                
-                // If it's teammate's stack, allow without pickup card (teammate can retrieve later)
-                if (stackCreator && isTeammate(stackCreator, currentTurn)) {
-                    console.log(`Teammate modifying stack without pickup card requirement`);
-                } else {
-                    // For own stack, opponent's stack, or unknown creator, must have pickup card
-                    const stackOwnership = stackCreator === currentTurn ? "your own" : 
-                                         (stackCreator && isOpponent(stackCreator, currentTurn)) ? "opponent's" : "this";
-                    alert(`You need at least one ${newStackValue} card remaining in your hand to modify ${stackOwnership} stack.`);
-                    return;
-                }
+        if (!hasPickupCard) {
+            // Check if this is teammate adding (relaxed rules)
+            const stackCreator = getStackCreator(selectedStackToAddTo);
+            const isTeammateAdd = stackCreator && isTeammate(stackCreator, currentTurn);
+            
+            if (!isTeammateAdd) {
+                alert(`You need at least one ${newStackValue} card remaining in your hand to add to this stack.`);
+                return;
             }
         }
 
-        // Update the existing stack - remove selected table cards from board (excluding the target stack)
+        // Update the existing stack - remove selected table cards from board
         const newBoard = players.board.filter(card => 
-            card !== selectedStackToAddTo && !selectedTableCards.filter(tc => tc !== selectedStackToAddTo).includes(card)
+            card !== selectedStackToAddTo && !selectedTableCards.includes(card)
         );
         
         // Create updated stack string with new value
-        const otherSelectedCards = selectedTableCards.filter(card => card !== selectedStackToAddTo);
-        const allSelectedCards = [selectedHandCard, ...otherSelectedCards];
+        const allSelectedCards = [selectedHandCard, ...selectedTableCards];
         const originalCards = selectedStackToAddTo.split(': ')[1] || '';
         newBoard.push(`Stack of ${newStackValue}: ${originalCards} + ${allSelectedCards.join(' + ')}`);
 
@@ -643,13 +581,14 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
     };
 
     const handlePickup = () => {
-        if (!selectedHandCard) {
-            alert("Please select exactly one card from your hand to pick up.");
-            return;
-        }
 
         if (selectedTableCards.length === 0) {
-            alert("Please select cards from the table to pick up.");
+        alert("Cannot pickup from empty table. Use 'Throw Away' instead.");
+        return;
+        }
+
+        if (!selectedHandCard) {
+            alert("Please select exactly one card from your hand to pick up.");
             return;
         }
 
@@ -815,43 +754,17 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
 
     const calculatePoints = (collectedCards) => {
         return collectedCards.reduce((total, card) => {
-            // Handle stack strings - extract individual cards from stacks
-            if (card.startsWith('Stack of')) {
-                const cardParts = card.split(': ')[1] ? card.split(': ')[1].split(' + ') : [];
-                const stackPoints = cardParts.reduce((stackTotal, stackCard) => {
-                    const trimmedCard = stackCard.trim();
-                    // Skip nested stacks to avoid double counting
-                    if (trimmedCard.startsWith('Stack of')) return stackTotal;
-                    
-                    const value = getCardValue(formatCardName(trimmedCard));
-                    const suitMatch = trimmedCard.match(/of\s+(\w+)/i);
-                    const suit = suitMatch ? suitMatch[1].toLowerCase() : '';
+            const value = getCardValue(formatCardName(card));
+            const suit = card.split(' ')[2].toLowerCase();
 
-                    if (suit === 'spades') {
-                        return stackTotal + value;
-                    } else if (value === 1) { // Aces
-                        return stackTotal + 1;
-                    } else if (trimmedCard.toLowerCase() === '10 of diamonds') {
-                        return stackTotal + 6;
-                    } else {
-                        return stackTotal;
-                    }
-                }, 0);
-                return total + stackPoints;
+            if (suit === 'spades') {
+                return total + value;
+            } else if (value === 1) { 
+                return total + 1;
+            } else if (card.toLowerCase() === '10 of diamonds') {
+                return total + 6;
             } else {
-                // Handle regular cards
-                const value = getCardValue(formatCardName(card));
-                const suit = card.split(' ')[2]?.toLowerCase() || '';
-
-                if (suit === 'spades') {
-                    return total + value;
-                } else if (value === 1) { // Aces
-                    return total + 1;
-                } else if (card.toLowerCase() === '10 of diamonds') {
-                    return total + 6;
-                } else {
-                    return total;
-                }
+                return total;
             }
         }, 0);
     };

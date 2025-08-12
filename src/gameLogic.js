@@ -12,28 +12,7 @@ export const formatCardName = (card) => {
     return `${value}_of_${suit}`;
 };
 
-// Face value for stack calculations (not scoring)
-export const getCardFaceValue = (card) => {
-    const value = card.split('_')[0];
-    switch (value) {
-        case 'ace': return 1;
-        case '2': return 2;
-        case '3': return 3;
-        case '4': return 4;
-        case '5': return 5;
-        case '6': return 6;
-        case '7': return 7;
-        case '8': return 8;
-        case '9': return 9;
-        case '10': return 10;
-        case 'jack': return 11;
-        case 'queen': return 12;
-        case 'king': return 13;
-        default: return null;
-    }
-};
-
-// Point value for scoring (different from face value)
+// Card value function (same as original - used for both face value AND scoring)
 export const getCardValue = (card) => {
     const value = card.split('_')[0];
     switch (value) {
@@ -104,19 +83,6 @@ export const getStackCards = (stackString) => {
     return stackString.split(': ')[1] ? stackString.split(': ')[1].split(' + ') : [];
 };
 
-// Calculate total face value of cards in stack (for stack math, not scoring)
-export const getStackTotalFaceValue = (stackString) => {
-    if (!stackString.startsWith('Stack of ')) return 0;
-    
-    const cardParts = getStackCards(stackString);
-    return cardParts.reduce((sum, cardName) => {
-        if (cardName.trim().startsWith('Stack of')) {
-            return sum + getStackValue(cardName.trim());
-        }
-        return sum + getCardFaceValue(formatCardName(cardName.trim()));
-    }, 0);
-};
-
 export const isLooseStack = (stackString, isStackingOnTop = false) => {
     if (isStackingOnTop) return true; // Always allow stacking matching value
     
@@ -174,7 +140,7 @@ export const canModifyStackValue = (stackString, playerPos) => {
 
 export const checkValidCalls = (playerHand) => {
     const validCalls = playerHand
-        .map(card => getCardFaceValue(formatCardName(card)))
+        .map(card => getCardValue(formatCardName(card)))
         .filter(value => value >= 9 && value <= 13);
 
     return [...new Set(validCalls)];
@@ -203,13 +169,13 @@ export const validatePickup = (selectedHandCard, selectedTableCards, call, moveC
         return { valid: false, message: "Please select exactly one card from your hand to pick up." };
     }
 
-    const handCardValue = getCardFaceValue(formatCardName(selectedHandCard));
+    const handCardValue = getCardValue(formatCardName(selectedHandCard));
     const tableCardsValue = selectedTableCards.reduce((sum, card) => {
         if (card.startsWith("Stack of")) {
             const stackValue = getStackValue(card);
             return sum + stackValue;
         }
-        return sum + getCardFaceValue(formatCardName(card));
+        return sum + getCardValue(formatCardName(card));
     }, 0);
 
     if (moveCount === 1) {
@@ -260,12 +226,12 @@ export const validateNewStack = (selectedHandCard, selectedTableCards, call, mov
         return { valid: false, message: `You can only use maximum 4 cards to create a stack. You selected ${totalCards} cards.` };
     }
 
-    const handCardValue = getCardFaceValue(formatCardName(selectedHandCard));
+    const handCardValue = getCardValue(formatCardName(selectedHandCard));
     const tableCardsValue = selectedTableCards.reduce((sum, card) => {
         if (card.startsWith("Stack of")) {
             return sum + getStackValue(card);
         }
-        return sum + getCardFaceValue(formatCardName(card));
+        return sum + getCardValue(formatCardName(card));
     }, 0);
     const totalStackValue = handCardValue + tableCardsValue;
 
@@ -280,7 +246,7 @@ export const validateNewStack = (selectedHandCard, selectedTableCards, call, mov
 
         const matchingCardExists = playerHand
             .filter(card => card !== selectedHandCard)
-            .some(card => getCardFaceValue(formatCardName(card)) === stackValue);
+            .some(card => getCardValue(formatCardName(card)) === stackValue);
 
         if (!matchingCardExists) {
             return { valid: false, message: `You need to have at least one more ${stackValue} in your hand to proceed.` };
@@ -296,7 +262,7 @@ export const validateNewStack = (selectedHandCard, selectedTableCards, call, mov
 
         const matchingCardExists = playerHand
             .filter(card => card !== selectedHandCard)
-            .some(card => getCardFaceValue(formatCardName(card)) === call);
+            .some(card => getCardValue(formatCardName(card)) === call);
             
         if (!matchingCardExists) {
             return { valid: false, message: `You need an extra card matching your call (${call}) in your hand to create this stack.` };
@@ -313,13 +279,13 @@ export const validateStackAddition = (selectedStackToAddTo, selectedHandCard, se
     }
 
     const currentStackValue = getStackValue(selectedStackToAddTo);
-    const handCardValue = getCardFaceValue(formatCardName(selectedHandCard));
+    const handCardValue = getCardValue(formatCardName(selectedHandCard));
     const tableCardsValue = selectedTableCards.reduce((sum, card) => {
         if (card.startsWith("Stack of")) {
             const stackVal = getStackValue(card);
             return sum + stackVal;
         }
-        return sum + getCardFaceValue(formatCardName(card));
+        return sum + getCardValue(formatCardName(card));
     }, 0);
     
     const totalSelectedValue = handCardValue + tableCardsValue;
@@ -348,21 +314,29 @@ export const validateStackAddition = (selectedStackToAddTo, selectedHandCard, se
             };
         }
 
-        // Calculate new stack value based on total face values
-        const currentStackFaceValue = getStackTotalFaceValue(selectedStackToAddTo);
-        const newTotalFaceValue = currentStackFaceValue + totalSelectedValue;
+        // Calculate new stack value based on total card values
+        // FIX: Use actual card values from stack string, not point values
+        const currentStackCards = selectedStackToAddTo.split(': ')[1] ? selectedStackToAddTo.split(': ')[1].split(' + ') : [];
+        const allExistingCardValues = currentStackCards.reduce((sum, cardName) => {
+            if (cardName.trim().startsWith('Stack of')) {
+                return sum + getStackValue(cardName.trim());
+            }
+            return sum + getCardValue(formatCardName(cardName.trim()));
+        }, 0);
         
-        console.log(`Value modification: current stack face value = ${currentStackFaceValue}, adding ${totalSelectedValue}, new total = ${newTotalFaceValue}`);
+        const newTotalCardValue = allExistingCardValues + totalSelectedValue;
+        
+        console.log(`Value modification: existing cards total = ${allExistingCardValues}, adding ${totalSelectedValue}, new total = ${newTotalCardValue}`);
         
         // Find valid stack values (9-13) that the new total can form
         const possibleValues = [9, 10, 11, 12, 13].filter(val => {
-            return newTotalFaceValue >= val && newTotalFaceValue % val === 0;
+            return newTotalCardValue >= val && newTotalCardValue % val === 0;
         });
         
         if (possibleValues.length === 0) {
             return { 
                 valid: false, 
-                message: `The new total face value (${newTotalFaceValue}) cannot form a valid stack value (9-13). The total must be divisible by the stack value.` 
+                message: `The new total card value (${newTotalCardValue}) cannot form a valid stack value (9-13). The total must be divisible by the stack value.` 
             };
         }
         
@@ -372,7 +346,7 @@ export const validateStackAddition = (selectedStackToAddTo, selectedHandCard, se
         // Check if player has matching card for new stack value
         const hasPickupCard = playerHand
             .filter(card => card !== selectedHandCard)
-            .some(card => getCardFaceValue(formatCardName(card)) === newStackValue);
+            .some(card => getCardValue(formatCardName(card)) === newStackValue);
             
         if (!hasPickupCard) {
             return { 
