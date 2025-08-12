@@ -58,14 +58,16 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
     };
     
     // Check if stack is loose (modifiable) or tight (locked)
-    const isLooseStack = (stackString) => {
-        const stackValue = getStackValue(stackString);
-        const totalPoints = getStackTotalPoints(stackString);
-        const cardCount = getStackCardCount(stackString);
-        
-        // Tight if: 4+ cards OR double+ the base value
-        const isTight = cardCount >= 4 || totalPoints >= (stackValue * 2);
-        return !isTight;
+    const isLooseStack = (stackString, isStackingOnTop = false) => {
+    if (isStackingOnTop) return true; // Always allow stacking matching value
+    
+    const stackValue = getStackValue(stackString);
+    const totalPoints = getStackTotalPoints(stackString);
+    const cardCount = getStackCardCount(stackString);
+    
+    // Tight if: 4+ cards OR double+ the base value
+    const isTight = cardCount >= 4 || totalPoints >= (stackValue * 2);
+    return !isTight;
     };
     
     // Get creator of a stack from board
@@ -489,7 +491,7 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
         const newStackCardCount = getStackCardCount(selectedStackToAddTo) + 1 + selectedTableCards.length;
 
         // Check if adding would exceed 4 cards
-        if (newStackCardCount > 4) {
+        if (totalSelectedValue !== currentStackValue && newStackCardCount > 4) {
             alert(`Adding these cards would result in ${newStackCardCount} cards in the stack. Maximum is 4 cards.`);
             return;
         }
@@ -579,6 +581,12 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
     };
 
     const handlePickup = () => {
+
+        if (selectedTableCards.length === 0) {
+        alert("Cannot pickup from empty table. Use 'Throw Away' instead.");
+        return;
+        }
+
         if (!selectedHandCard) {
             alert("Please select exactly one card from your hand to pick up.");
             return;
