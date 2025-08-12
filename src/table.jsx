@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import initialDeck from './initialDeck';
 import TableUI from './TableUI';
 import {
@@ -34,6 +34,8 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
     const [team2SeepCount, setTeam2SeepCount] = useState(0);
     const [team1Points, setTeam1Points] = useState(0);
     const [team2Points, setTeam2Points] = useState(0);
+    
+    const gameStateRef = useRef();
     
     // Initialize game state
     useEffect(() => {
@@ -113,7 +115,7 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
         };
     }, [socket]);
     
-    // Update game state
+    // Update game state - FIXED to prevent infinite loop
     useEffect(() => {
         if (!onGameAction) return;
         
@@ -134,13 +136,12 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
             team2Points
         };
         
-        onGameAction('updateGameState', gameState);
-    }, [
-        deck, players, currentTurn, moveCount, call, boardVisible,
-        collectedCards, dealVisible, remainingCardsDealt, 
-        showDRCButton, team1SeepCount, team2SeepCount, 
-        team1Points, team2Points
-    ]);
+        // Only update if game state actually changed
+        if (JSON.stringify(gameState) !== JSON.stringify(gameStateRef.current)) {
+            gameStateRef.current = gameState;
+            onGameAction('updateGameState', gameState);
+        }
+    }); // Removed dependencies to prevent infinite loop
 
     const dealCards = () => {
         let shuffledDeck = shuffleDeck([...deck]);
