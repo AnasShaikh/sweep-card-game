@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     getStackValue,
     getStackTotalPoints,
@@ -24,23 +24,6 @@ const getCreatorDisplayName = (stackString, currentPosition, playerNames) => {
     } else {
         return `${playerNames[creator]} (Opponent)`;
     }
-};
-
-// Get position class for player layout
-const getPositionClass = (playerKey, myPosition) => {
-    const positions = {
-        plyr1: 'top',
-        plyr2: 'right', 
-        plyr3: 'bottom',
-        plyr4: 'left'
-    };
-    
-    // Rotate positions based on current player's perspective
-    const myPositionIndex = Object.keys(positions).indexOf(myPosition);
-    const playerIndex = Object.keys(positions).indexOf(playerKey);
-    const relativeIndex = (playerIndex - myPositionIndex + 4) % 4;
-    
-    return Object.values(positions)[relativeIndex];
 };
 
 export default function TableUI({
@@ -71,6 +54,7 @@ export default function TableUI({
     onHandCardSelection,
     onTableCardSelection,
     onExistingStackSelection,
+    onDealCards,
     onDealRemainingCards,
     onCall,
     onPickup,
@@ -79,6 +63,21 @@ export default function TableUI({
     onThrowAway,
     onClearSelections
 }) {
+    
+    // State to track if we're on mobile
+    const [isMobile, setIsMobile] = useState(false);
+    
+    // Check screen size on mount and resize
+    useEffect(() => {
+        const checkScreenSize = () => {
+            setIsMobile(window.innerWidth <= 600);
+        };
+        
+        checkScreenSize();
+        window.addEventListener('resize', checkScreenSize);
+        
+        return () => window.removeEventListener('resize', checkScreenSize);
+    }, []);
     
     const renderBoardCards = () => {
         return players.board.map((card, cardIndex) => {
@@ -98,21 +97,29 @@ export default function TableUI({
                         onClick={() => {
                             if (!isMyTurn) return;
                             
+                            // If already selected for adding to, toggle off
                             if (isSelectedForAddTo) {
                                 onExistingStackSelection(null);
                                 return;
                             }
                             
+                            // If already selected as table card, toggle off
                             if (isSelectedAsTableCard) {
                                 onTableCardSelection(card);
                                 return;
                             }
                             
+                            // Determine selection mode based on current selections
                             if (selectedStackToAddTo) {
+                                // Already have a stack selected for adding to, so select this as table card
                                 onTableCardSelection(card);
                             } else if (selectedTableCards.length > 0 || selectedHandCard) {
+                                // Have other selections, so this is likely for pickup - select as table card
                                 onTableCardSelection(card);
                             } else {
+                                // No other selections, could be either pickup or add-to
+                                // For now, default to table card selection (pickup mode)
+                                // User can use "Add to Stack" button if they want add-to mode
                                 onTableCardSelection(card);
                             }
                         }}
@@ -138,7 +145,7 @@ export default function TableUI({
                                         }}
                                         className="stack-action-btn"
                                     >
-                                        Select for Pickup
+                                        {isMobile ? 'Pickup' : 'Select for Pickup'}
                                     </button>
                                     {canAdd && (
                                         <button 
@@ -148,7 +155,7 @@ export default function TableUI({
                                             }}
                                             className="stack-action-btn"
                                         >
-                                            {isLooseStack(card) ? 'Modify Stack' : 'Add to Stack'}
+                                            {isMobile ? (isLooseStack(card) ? 'Modify' : 'Add') : (isLooseStack(card) ? 'Modify Stack' : 'Add to Stack')}
                                         </button>
                                     )}
                                 </div>
@@ -171,150 +178,232 @@ export default function TableUI({
         });
     };
 
-    const renderHandCards = (playerKey) => {
-        return players[playerKey].map((card, cardIndex) => {
+    const renderHandCards = () => {
+        return players[currentTurn].map((card, cardIndex) => {
             const imagePath = `/cards/${formatCardName(card)}.svg`;
-            const isCurrentPlayerTurn = currentTurn === playerKey;
-            const isMyCards = position === playerKey;
-            const canSelect = isCurrentPlayerTurn && isMyTurn && isMyCards;
 
             return (
                 <div 
                     key={cardIndex} 
-                    className={`handCard ${selectedHandCard === card ? 'selected' : ''} ${canSelect ? 'selectable' : ''}`}
-                    onClick={() => canSelect ? onHandCardSelection(card) : null}
+                    className={`handCard ${selectedHandCard === card ? 'selected' : ''}`}
+                    onClick={() => onHandCardSelection(card)}
                 >
-                    {isMyCards ? 
-                        <img src={imagePath} alt={card} className="cardImage" /> : 
-                        <img src="/cards/card_back.svg" alt="Card Back" className="cardImage" />
-                    }
+                    <img src={imagePath} alt={card} className="cardImage" />
                 </div>
             );
         });
     };
 
-    const renderPlayerArea = (playerKey) => {
-        const positionClass = getPositionClass(playerKey, position);
-        const isCurrentPlayer = currentTurn === playerKey;
-        const isMe = position === playerKey;
-        
+    const renderPlayerArea = (playerId) => {
+        const isCurrentPlayer = currentTurn === playerId && isMyTurn;
+        const isMyPlayer = position === playerId;
         return (
-            <div key={playerKey} className={`playerArea ${positionClass} ${isCurrentPlayer ? 'current-turn' : ''} ${isMe ? 'my-area' : ''}`}>
-                <div className="player-header">
-                    <h3>
-                        {playerNames[playerKey]} 
-                        {isMe && ' (You)'}
-                        {isCurrentPlayer && ' - Current Turn'}
-                    </h3>
+            <div className={`playerArea ${isCurrentPlayer ? 'current-player' : ''} ${isMyPlayer ? 'my-player' : ''}`} id={playerId} key={playerId}>
+                <h3>
+                    {playerNames[playerId]} 
+                    {currentTurn === playerId ? ' (Current Turn)' : ''}
+                    {isMobile && position === playerId ? ' (You)' : ''}
+                </h3>
+                <div className="cardDivPlay">
+                    {currentTurn === playerId && isMyTurn ? renderHandCards() : players[playerId].map((card, cardIndex) => (
+                        <div className='handCard' key={cardIndex}>
+                            {position === playerId ? 
+                                <img src={`/cards/${formatCardName(card)}.svg`} alt={card} className="cardImage" /> : 
+                                <img src="/cards/card_back.svg" alt="Card Back" className="cardImage" />
+                            }
+                        </div>
+                    ))}
                 </div>
-                
-                <div className="player-cards">
-                    <div className="hand-cards">
-                        {renderHandCards(playerKey)}
-                    </div>
-                </div>
-                
-                <div className="collected-section">
-                    <h4>Collected ({collectedCards[playerKey].length} cards)</h4>
-                    <div className="collected-cards-grid">
-                        {collectedCards[playerKey].slice(0, 8).map((card, cardIndex) => (
-                            <div key={cardIndex} className="collected-card-mini">
-                                <img src={`/cards/${formatCardName(card)}.svg`} alt={card} className="mini-card" />
+                <div className="collectedCards">
+                    <h4>{isMobile ? 'Collected:' : 'Collected Cards:'}</h4>
+                    <div className="cardDiv">
+                        {collectedCards[playerId].map((card, cardIndex) => (
+                            <div key={cardIndex} className="collectedCard">
+                                <img src={`/cards/${formatCardName(card)}.svg`} alt={card} className="cardImage" />
                             </div>
                         ))}
-                        {collectedCards[playerKey].length > 8 && (
-                            <div className="more-cards">+{collectedCards[playerKey].length - 8}</div>
-                        )}
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    // Mobile layout wrapper
+    const renderMobileLayout = () => {
+        // Find your player area to always show
+        const myPlayerArea = renderPlayerArea(position);
+        const otherPlayers = ['plyr1', 'plyr2', 'plyr3', 'plyr4']
+            .filter(id => id !== position)
+            .map(id => renderPlayerArea(id));
+        
+        return (
+            <div className='playTable'>
+                {/* Points Section */}
+                <div className="pointsSection">
+                    <h4>Team 1 ({playerNames.plyr1} & {playerNames.plyr3}): {team1Points + calculatePoints([...collectedCards.plyr1, ...collectedCards.plyr3])}</h4>
+                    <h4>Team 2 ({playerNames.plyr2} & {playerNames.plyr4}): {team2Points + calculatePoints([...collectedCards.plyr2, ...collectedCards.plyr4])}</h4>
+                </div>
+                
+                {/* Board - Large and prominent */}
+                <div className='playerArea' id='board'>
+                    <h3>Board</h3>
+                    <div className="cardDivBoard">
+                        {boardVisible ? renderBoardCards() : <div>Cards Hidden</div>}
                     </div>
                 </div>
                 
-                {/* Action buttons for current player */}
-                {isCurrentPlayer && isMyTurn && (
-                    <div className="player-actions">
-                        {moveCount === 1 && currentTurn === 'plyr2' && !call && (
-                            <div className="call-section">
-                                <h4>Make your call:</h4>
-                                <div className="call-buttons">
-                                    {checkValidCalls(players.plyr2).map(num => (
-                                        <button key={num} onClick={() => onCall(num)} className="call-btn">
-                                            Call {num}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                        
-                        {call && (
-                            <div className="action-section">
-                                <div className="selection-info">
-                                    {selectedHandCard && (
-                                        <p>Hand: {selectedHandCard} (Value: {selectedHandValue})</p>
-                                    )}
-                                    {selectedTableCards.length > 0 && (
-                                        <p>Table: {selectedTableCards.length} cards selected</p>
-                                    )}
-                                    {selectedStackToAddTo && (
-                                        <p>{isLooseStack(selectedStackToAddTo) ? 'Modifying' : 'Adding to'} stack</p>
-                                    )}
-                                </div>
-                                
-                                <div className="action-buttons">
-                                    {!selectedStackToAddTo && <button onClick={onPickup} className="action-btn pickup">Pickup</button>}
-                                    {!selectedStackToAddTo && <button onClick={onConfirmStack} className="action-btn stack">Create Stack</button>}
-                                    {selectedStackToAddTo && <button onClick={onConfirmAddToStack} className="action-btn add-stack">Add to Stack</button>}
-                                    <button onClick={onThrowAway} className="action-btn throw">Throw Away</button>
-                                    <button onClick={onClearSelections} className="action-btn clear">Clear</button>
-                                </div>
-                            </div>
-                        )}
-                        
-                        {showDRCButton && (
-                            <button onClick={onDealRemainingCards} className="deal-btn">
-                                Deal Remaining Cards
+                {/* Your cards - Always visible */}
+                {myPlayerArea}
+                
+                {/* Other Players - Compact grid, no card backs */}
+                <div className="players-mobile-grid">
+                    {otherPlayers}
+                </div>
+                
+                {/* Controls */}
+                {renderControls()}
+            </div>
+        );
+    };
+
+    // Desktop layout (back to original structure + improvements)
+    const renderDesktopLayout = () => {
+        return (
+            <div className='playTable'>
+                <div className="pointsSection">
+                    <h4>Team 1 ({playerNames.plyr1} & {playerNames.plyr3}) Points: {team1Points + calculatePoints([...collectedCards.plyr1, ...collectedCards.plyr3])}</h4>
+                    <h4>Team 2 ({playerNames.plyr2} & {playerNames.plyr4}) Points: {team2Points + calculatePoints([...collectedCards.plyr2, ...collectedCards.plyr4])}</h4>
+                </div>
+                
+                {renderPlayerArea('plyr1')}
+                
+                <div className='playerArea' id='board'>
+                    <h3>Board</h3>
+                    <div className="cardDivBoard">
+                        {boardVisible ? renderBoardCards() : <div>Cards Hidden</div>}
+                    </div>
+                </div>
+                
+                {renderPlayerArea('plyr2')}
+                {renderPlayerArea('plyr3')}
+                {renderPlayerArea('plyr4')}
+                
+                {renderControls()}
+            </div>
+        );
+    };
+
+    const renderControls = () => {
+        return (
+            <div className="controls">
+                {/* Deal Remaining Cards Button */}
+                {isMyTurn && showDRCButton && (
+                    <button onClick={onDealRemainingCards}>
+                        {isMobile ? 'Deal Cards' : 'Deal Remaining Cards'}
+                    </button>
+                )}
+                
+                {/* Call Phase */}
+                {isMyTurn && moveCount === 1 && currentTurn === 'plyr2' && !call && (
+                    <div>
+                        <h4>{isMobile ? 'Your call:' : `${playerNames.plyr2}, make your call:`}</h4>
+                        {checkValidCalls(players.plyr2).map(num => (
+                            <button key={num} onClick={() => onCall(num)}>
+                                Call {num}
                             </button>
-                        )}
+                        ))}
                     </div>
                 )}
                 
-                {!isMyTurn && isCurrentPlayer && (
-                    <div className="waiting-turn">
-                        <p>Waiting for {playerNames[currentTurn]}'s move...</p>
+                {/* Game Actions Phase */}
+                {isMyTurn && call && (
+                    <div>
+                        <h4>{isMobile ? 'Choose action:' : `${playerNames[currentTurn]}, choose your action:`}</h4>
+                        
+                        {/* Show selection info */}
+                        {selectedHandCard && (
+                            <p>
+                                {isMobile ? `Hand: ${selectedHandCard}` : `Selected hand card: ${selectedHandCard}`} 
+                                {!isMobile && ` (Value: ${selectedHandValue})`}
+                            </p>
+                        )}
+                        
+                        {selectedStackToAddTo && (
+                            <p>
+                                {isMobile ? 
+                                    `${isLooseStack(selectedStackToAddTo) ? 'Modifying' : 'Adding to'}: ${selectedStackToAddTo.split(':')[0]}` :
+                                    `${isLooseStack(selectedStackToAddTo) ? 'Modifying' : 'Adding to'}: ${selectedStackToAddTo.split(':')[0]} 
+                                    Current: ${getStackTotalPoints(selectedStackToAddTo)} pts, ${getStackCardCount(selectedStackToAddTo)} cards
+                                    After adding: Hand(${selectedHandValue}) + Table(${selectedTableCards.reduce((sum, card) => {
+                                        if (card.startsWith("Stack of")) return sum + getStackValue(card);
+                                        return sum + getCardValue(formatCardName(card));
+                                    }, 0)}) = ${selectedHandValue + selectedTableCards.reduce((sum, card) => {
+                                        if (card.startsWith("Stack of")) return sum + getStackValue(card);
+                                        return sum + getCardValue(formatCardName(card));
+                                    }, 0)} total pts`
+                                }
+                            </p>
+                        )}
+                        
+                        {selectedTableCards.length > 0 && !selectedStackToAddTo && (
+                            <p>{isMobile ? `Table: ${selectedTableCards.length} cards` : `Selected table cards: ${selectedTableCards.length} cards`}</p>
+                        )}
+                        
+                        {!isMobile && (
+                            <p>
+                                {selectedStackToAddTo ? 
+                                    'Select one card from your hand and table cards that together sum to the stack value, then click "Add to Stack"' :
+                                    'Select one card from your hand, then select cards from the table or an existing stack.'
+                                }
+                            </p>
+                        )}
+                        
+                        <div className="action-buttons">
+                            {!selectedStackToAddTo && (
+                                <>
+                                    <button onClick={onPickup}>
+                                        {isMobile ? 'Pickup' : 'Confirm Pickup'}
+                                    </button>
+                                    <button onClick={onConfirmStack}>
+                                        {isMobile ? 'New Stack' : 'Create New Stack'}
+                                    </button>
+                                </>
+                            )}
+                            {selectedStackToAddTo && (
+                                <button onClick={onConfirmAddToStack}>
+                                    {isMobile ? 'Add to Stack' : 'Add to Stack'}
+                                </button>
+                            )}
+                            <button onClick={onThrowAway}>
+                                {isMobile ? 'Throw' : 'Throw Away'}
+                            </button>
+                        </div>
+                        
+                        {/* Clear selections button */}
+                        <button 
+                            onClick={onClearSelections}
+                            className="clear-btn"
+                        >
+                            {isMobile ? 'Clear' : 'Clear Selections'}
+                        </button>
+                    </div>
+                )}
+                
+                {/* Waiting message */}
+                {!isMyTurn && (
+                    <div className="waiting-message">
+                        <p>
+                            {isMobile ? 
+                                `Waiting for ${playerNames[currentTurn]}...` :
+                                `Waiting for ${playerNames[currentTurn]}'s move...`
+                            }
+                        </p>
                     </div>
                 )}
             </div>
         );
     };
 
-    return (
-        <div className="game-table">
-            {/* Score Header */}
-            <div className="score-header">
-                <div className="team-score">
-                    <h3>Team 1: {playerNames.plyr1} & {playerNames.plyr3}</h3>
-                    <div className="points">{team1Points + calculatePoints([...collectedCards.plyr1, ...collectedCards.plyr3])} points</div>
-                </div>
-                <div className="game-info">
-                    <div>Move: {moveCount}</div>
-                </div>
-                <div className="team-score">
-                    <h3>Team 2: {playerNames.plyr2} & {playerNames.plyr4}</h3>
-                    <div className="points">{team2Points + calculatePoints([...collectedCards.plyr2, ...collectedCards.plyr4])} points</div>
-                </div>
-            </div>
-            
-            {/* Game Table Layout */}
-            <div className="table-layout">
-                {/* Render players in their positions */}
-                {['plyr1', 'plyr2', 'plyr3', 'plyr4'].map(playerKey => renderPlayerArea(playerKey))}
-                
-                {/* Central Board */}
-                <div className="board-area">
-                    <h3>Board</h3>
-                    <div className="board-cards">
-                        {boardVisible ? renderBoardCards() : <div className="cards-hidden">Cards Hidden</div>}
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
+    // Return the appropriate layout based on screen size
+    return isMobile ? renderMobileLayout() : renderDesktopLayout();
 }
