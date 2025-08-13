@@ -17,7 +17,7 @@ import {
     handleEndOfRound
 } from './tableActions';
 
-export default function Table({ gameId, user, position, playerNames, socket, onGameAction, initialGameState }) {
+export default function Table({ gameId, user, position, playerNames, socket, onGameAction, initialGameState, onTerminateGame }) {
     const [deck, setDeck] = useState(initialDeck);
     const [players, setPlayers] = useState({ plyr1: [], plyr2: [], plyr3: [], plyr4: [], board: [] });
     const [currentTurn, setCurrentTurn] = useState('plyr2'); // Start with plyr2 (opposite team)
@@ -84,6 +84,7 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
             
             switch (action) {
                 case 'dealCards':
+                case 'autoDealCards': // Handle both manual and auto-deal
                     setPlayers(data.players);
                     setDeck(data.deck);
                     setMoveCount(1);
@@ -505,6 +506,9 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
                 setSelectedTableCards([]);
                 setSelectedStackToAddTo(null);
             }}
+            
+            // NEW: Terminate Game
+            onTerminateGame={onTerminateGame}
         />
     );
 }

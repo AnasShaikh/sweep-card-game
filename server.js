@@ -477,6 +477,122 @@ io.on('connection', (socket) => {
     }
   });
   
+  // Auto-deal handler for resumed games
+  socket.on('autoDealCards', async ({ userId, gameId }) => {
+    console.log(`Auto-deal cards: ${userId} -> ${gameId}`);
+    
+    try {
+      let game = await getGameFromDB(gameId);
+      if (!game) {
+        game = games[gameId];
+      }
+      
+      if (!game) {
+        return socket.emit('error', 'Game not found');
+      }
+      
+      // Check if this is a valid auto-deal scenario
+      if (game.status !== 'playing' || !game.gameState || game.gameState.moveCount !== 0) {
+        return socket.emit('error', 'Auto-deal not applicable for this game state');
+      }
+      
+      // Verify user is in the game
+      if (!Object.values(game.players).includes(userId)) {
+        return socket.emit('error', 'You are not a participant in this game');
+      }
+      
+      // Auto-deal cards (same logic as manual deal)
+      const { shuffleDeck } = await import('./src/tableLogic.js');
+      const initialDeck = await import('./src/initialDeck.js');
+      
+      let shuffledDeck = shuffleDeck([...initialDeck.default]);
+      let newPlayers = {
+        plyr1: shuffledDeck.splice(0, 4),
+        plyr2: shuffledDeck.splice(0, 4), 
+        plyr3: shuffledDeck.splice(0, 4),
+        plyr4: shuffledDeck.splice(0, 4),
+        board: shuffledDeck.splice(0, 4)
+      };
+      
+      // Update game state for auto-dealt cards
+      const newGameState = {
+        ...game.gameState,
+        deck: shuffledDeck,
+        players: newPlayers,
+        currentTurn: 'plyr2',
+        moveCount: 1,
+        boardVisible: false,
+        dealVisible: false,
+        call: null
+      };
+      
+      // Update in database
+      await updateGameInDB(gameId, { gameState: newGameState });
+      
+      // Update memory storage
+      game.gameState = newGameState;
+      games[gameId] = game;
+      
+      console.log(`Auto-dealt cards for game ${gameId}`);
+      
+      // Broadcast to all players in the game
+      io.to(gameId).emit('gameAction', { 
+        player: userId, 
+        action: 'autoDealCards', 
+        data: {
+          players: newPlayers,
+          deck: shuffledDeck
+        }
+      });
+    } catch (error) {
+      console.error('Error in autoDealCards:', error);
+      socket.emit('error', 'Server error during auto-deal');
+    }
+  });
+  
+  // NEW: Terminate game handler
+  socket.on('terminateGame', async ({ userId, gameId }) => {
+    console.log(`Terminate game: ${userId} -> ${gameId}`);
+    
+    try {
+      let game = await getGameFromDB(gameId);
+      if (!game) {
+        game = games[gameId];
+      }
+      
+      if (!game) {
+        return socket.emit('error', 'Game not found');
+      }
+      
+      // Verify user is in the game
+      if (!Object.values(game.players).includes(userId)) {
+        return socket.emit('error', 'You are not a participant in this game');
+      }
+      
+      // Update game status to terminated
+      game.status = 'terminated';
+      
+      // Update in database
+      await updateGameInDB(gameId, {
+        status: 'terminated'
+      });
+      
+      // Update memory storage
+      games[gameId] = game;
+      
+      console.log(`Game ${gameId} terminated by user ${userId}`);
+      
+      // Broadcast termination to all players in the game
+      io.to(gameId).emit('gameTerminated', { 
+        terminatedBy: userId,
+        gameId: gameId
+      });
+    } catch (error) {
+      console.error('Error in terminateGame:', error);
+      socket.emit('error', 'Server error during game termination');
+    }
+  });
+  
   socket.on('gameAction', async ({ userId, gameId, action, data }) => {
     try {
       let game = await getGameFromDB(gameId);

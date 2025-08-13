@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import Table from './table';
@@ -10,9 +10,24 @@ const GameRoom = ({ user, authenticatedFetch }) => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
   
+  // Use ref to track auto-deal to avoid stale closures and ensure proper cleanup
+  const autoDealtRef = useRef(false);
+  const socketRef = useRef(null);
+  
+  // Reset auto-deal tracking when gameId changes (navigating between games)
   useEffect(() => {
+    autoDealtRef.current = false;
+  }, [gameId]);
+  
+  useEffect(() => {
+    // Clean up previous socket if exists
+    if (socketRef.current) {
+      socketRef.current.disconnect();
+    }
+    
     const newSocket = io();
     setSocket(newSocket);
+    socketRef.current = newSocket;
     
     newSocket.on('connect', () => {
       console.log('Socket connected:', newSocket.id);
@@ -31,24 +46,36 @@ const GameRoom = ({ user, authenticatedFetch }) => {
       console.log(`User ${user.username} attempting to join room ${gameId}`);
     });
     
-    // Define event handlers inside useEffect to avoid stale closures
-    function handleGameUpdate(updatedGame) {
+    // Define event handlers
+    const handleGameUpdate = (updatedGame) => {
       console.log(`${user.username} received game update:`, updatedGame);
-      setGame(prevGame => {
-        console.log(`${user.username} updating from:`, prevGame, 'to:', updatedGame);
-        return updatedGame;
-      });
-    }
+      setGame(updatedGame);
+      
+      // Reset auto-deal flag when game returns to waiting status
+      if (updatedGame.status === 'waiting') {
+        autoDealtRef.current = false;
+      }
+    };
     
-    function handleGameStarted(startedGame) {
+    const handleGameStarted = (startedGame) => {
       console.log(`${user.username} received game started:`, startedGame);
-      setGame(prevGame => {
-        console.log(`${user.username} game started, updating from:`, prevGame, 'to:', startedGame);
-        return startedGame;
-      });
-    }
+      setGame(startedGame);
+    };
     
-    function handleError(errorMsg) {
+    const handleGameTerminated = ({ terminatedBy, gameId }) => {
+      console.log(`Game ${gameId} was terminated by user ${terminatedBy}`);
+      setError(`Game was terminated by a player`);
+      
+      // Reset auto-deal flag on termination
+      autoDealtRef.current = false;
+      
+      // Redirect to lobby after 3 seconds
+      setTimeout(() => {
+        navigate('/lobby');
+      }, 3000);
+    };
+    
+    const handleError = (errorMsg) => {
       console.error('Socket error:', errorMsg);
       setError(errorMsg);
       
@@ -58,11 +85,12 @@ const GameRoom = ({ user, authenticatedFetch }) => {
         localStorage.removeItem('auth_token');
         navigate('/');
       }
-    }
+    };
     
     // Register event listeners
     newSocket.on('gameUpdate', handleGameUpdate);
     newSocket.on('gameStarted', handleGameStarted);
+    newSocket.on('gameTerminated', handleGameTerminated);
     newSocket.on('error', handleError);
     
     // Load initial game state
@@ -72,10 +100,50 @@ const GameRoom = ({ user, authenticatedFetch }) => {
     return () => {
       newSocket.off('gameUpdate', handleGameUpdate);
       newSocket.off('gameStarted', handleGameStarted);
+      newSocket.off('gameTerminated', handleGameTerminated);
       newSocket.off('error', handleError);
       newSocket.disconnect();
+      socketRef.current = null;
     };
   }, [gameId, user.id, user.username, navigate]); 
+  
+  // Auto-deal detection with proper state management
+  useEffect(() => {
+    // Only run if we have all required data and haven't already triggered auto-deal
+    if (!game || !socket || autoDealtRef.current) return;
+    
+    // Check for limbo state: playing + moveCount 0 + user is participant
+    if (game.status === 'playing' && 
+        game.gameState && 
+        game.gameState.moveCount === 0 && 
+        Object.values(game.players).includes(user.id)) {
+      
+      // Check if cards have been dealt
+      const hasPlayerCards = game.gameState.players && 
+        Object.keys(game.gameState.players).some(playerKey => {
+          if (playerKey === 'board') return false;
+          const hand = game.gameState.players[playerKey];
+          return Array.isArray(hand) && hand.length > 0;
+        });
+      
+      const hasBoardCards = game.gameState.players && 
+        Array.isArray(game.gameState.players.board) && 
+        game.gameState.players.board.length > 0;
+      
+      if (!hasPlayerCards && !hasBoardCards) {
+        // TRUE LIMBO: Auto-deal needed
+        console.log('=== AUTO-DEAL TRIGGERED ===');
+        console.log('Game in limbo state - no cards dealt yet');
+        
+        autoDealtRef.current = true; // Set flag immediately to prevent re-triggers
+        socket.emit('autoDealCards', { userId: user.id, gameId });
+      } else {
+        // NORMAL RESUME: Game has cards, just resuming
+        console.log('=== NORMAL RESUME ===');
+        console.log('Game has cards - normal resume');
+      }
+    }
+  }, [game, socket, user.id, gameId]);
   
   const loadGame = async () => {
     try {
@@ -133,6 +201,24 @@ const GameRoom = ({ user, authenticatedFetch }) => {
       userId: user.id,
       gameId
     });
+  };
+  
+  const terminateGame = () => {
+    if (!socket) {
+      setError('Unable to terminate game. Please try refreshing the page.');
+      return;
+    }
+    
+    const confirmed = window.confirm(
+      'Are you sure you want to terminate this game? This action cannot be undone and will end the game for all players.'
+    );
+    
+    if (confirmed) {
+      socket.emit('terminateGame', {
+        userId: user.id,
+        gameId
+      });
+    }
   };
   
   const getUserPosition = () => {
@@ -200,10 +286,16 @@ const GameRoom = ({ user, authenticatedFetch }) => {
             socket.emit('gameAction', { userId: user.id, gameId, action, data });
           }}
           initialGameState={game.gameState}
+          onTerminateGame={terminateGame}
         />
-        <button onClick={() => navigate('/lobby')} className="back-btn">
-          Back to Lobby
-        </button>
+        <div className="game-room-actions">
+          <button onClick={() => navigate('/lobby')} className="back-btn">
+            Back to Lobby
+          </button>
+          <button onClick={terminateGame} className="terminate-btn" style={{backgroundColor: '#dc3545', color: 'white', marginLeft: '10px'}}>
+            Terminate Game
+          </button>
+        </div>
       </div>
     );
   }
@@ -280,6 +372,12 @@ const GameRoom = ({ user, authenticatedFetch }) => {
         {game && (
           <button onClick={loadGame} className="refresh-btn">
             Refresh Game
+          </button>
+        )}
+        
+        {game && isUserInGame() && (
+          <button onClick={terminateGame} className="terminate-btn" style={{backgroundColor: '#dc3545', color: 'white', marginLeft: '10px'}}>
+            Terminate Game
           </button>
         )}
       </div>
