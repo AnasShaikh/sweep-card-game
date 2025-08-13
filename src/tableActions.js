@@ -11,7 +11,8 @@ import {
     formatCardName,
     getCardValue,
     nextPlayer,
-    findAllPickupCombinations
+    findAllPickupCombinations,
+    findAllStackCombinations
 } from './tableLogic';
 
 export const confirmStack = (
@@ -53,7 +54,7 @@ export const confirmStack = (
         return;
     }
 
-    // Check maximum 4 cards total for new stack
+    // Check maximum 4 cards total for new stack (before auto-expansion)
     const totalCards = 1 + selectedTableCards.length; // 1 hand card + table cards
     if (totalCards > 4) {
         alert(`You can only use maximum 4 cards to create a stack. You selected ${totalCards} cards.`);
@@ -110,9 +111,12 @@ export const confirmStack = (
         }
     }
 
-    // Create new stack
-    const newBoard = players.board.filter(card => !selectedTableCards.includes(card));
-    newBoard.push(`Stack of ${stackValue} (by ${currentTurn}): ${selectedHandCard} + ${selectedTableCards.join(' + ')}`);
+    // AUTO-EXPAND: Find all cards that should be included in this stack
+    const allStackCards = findAllStackCombinations(stackValue, players.board, selectedTableCards, selectedHandCard);
+
+    // Create new stack with all found cards
+    const newBoard = players.board.filter(card => !allStackCards.includes(card));
+    newBoard.push(`Stack of ${stackValue} (by ${currentTurn}): ${selectedHandCard} + ${allStackCards.join(' + ')}`);
 
     const newHand = players[currentTurn].filter(card => card !== selectedHandCard);
     const nextPlayerTurn = nextPlayer(currentTurn);

@@ -150,6 +150,49 @@ export const findAllPickupCombinations = (handCardValue, boardCards, selectedTab
     return allPickupCards;
 };
 
+// Find all cards that should be included when creating a stack of the given value
+export const findAllStackCombinations = (stackValue, boardCards, selectedTableCards, selectedHandCard) => {
+    const allStackCards = [...selectedTableCards]; // Start with manually selected cards
+    const remainingCards = boardCards.filter(card => !selectedTableCards.includes(card));
+    
+    // Find all single cards/stacks that equal the stack value
+    const matchingSingleCards = remainingCards.filter(card => {
+        if (card.startsWith('Stack of')) {
+            return getStackValue(card) === stackValue;
+        } else {
+            return getCardValue(formatCardName(card)) === stackValue;
+        }
+    });
+    
+    allStackCards.push(...matchingSingleCards);
+    
+    // Find combinations of non-stack cards that equal the stack value
+    const nonStackCards = remainingCards.filter(card => 
+        !card.startsWith('Stack of') && 
+        !matchingSingleCards.includes(card)
+    );
+    
+    // Generate all possible combinations of remaining non-stack cards
+    const combinations = getAllCombinations(nonStackCards);
+    
+    for (const combo of combinations) {
+        const comboValue = combo.reduce((sum, card) => 
+            sum + getCardValue(formatCardName(card)), 0
+        );
+        
+        // Check if combination value equals the stack value (not multiples)
+        if (comboValue === stackValue) {
+            // Make sure none of these cards are already included
+            const canAddCombo = combo.every(card => !allStackCards.includes(card));
+            if (canAddCombo) {
+                allStackCards.push(...combo);
+            }
+        }
+    }
+    
+    return allStackCards;
+};
+
 // Helper function to generate all possible combinations of an array
 const getAllCombinations = (arr) => {
     const result = [];
