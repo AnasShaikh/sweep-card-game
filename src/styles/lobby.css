@@ -1,18 +1,234 @@
-/* Lobby Page Styles */
+/* Lobby Component Styles */
 
 .lobby-container {
-  width: 90%;
-  max-width: 900px;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  padding: 30px;
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
 }
 
-/* Game Room */
-.game-room {
-  width: 95%;
-  max-width: 1200px;
+.lobby-welcome {
+  text-align: center;
+  font-size: 1.2em;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.lobby-actions {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  margin-bottom: 30px;
+}
+
+.create-game-btn, .refresh-btn {
+  padding: 12px 24px;
+  font-size: 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.create-game-btn {
+  background-color: #007bff;
+  color: white;
+}
+
+.create-game-btn:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+.create-game-btn:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+.refresh-btn {
+  background-color: #28a745;
+  color: white;
+}
+
+.refresh-btn:hover:not(:disabled) {
+  background-color: #1e7e34;
+}
+
+.refresh-btn:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+.error-message {
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 15px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  border: 1px solid #f5c6cb;
+}
+
+/* Active Games Section */
+.active-games-list {
+  margin-bottom: 40px;
+  padding: 20px;
+  background-color: #e8f5e8;
+  border-radius: 8px;
+  border: 2px solid #28a745;
+}
+
+.active-games-list h3 {
+  color: #155724;
+  margin-bottom: 20px;
+  text-align: center;
+  font-size: 1.4em;
+}
+
+/* Available Games Section */
+.games-list {
+  margin-bottom: 30px;
+}
+
+.games-list h3 {
+  color: #495057;
+  margin-bottom: 20px;
+  text-align: center;
+  font-size: 1.4em;
+}
+
+.no-games {
+  text-align: center;
+  padding: 40px;
+  color: #6c757d;
+  font-style: italic;
+}
+
+.games-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.game-item {
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 20px;
+  background-color: #fff;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: box-shadow 0.3s ease, transform 0.2s ease;
+}
+
+.game-item:hover {
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+  transform: translateY(-2px);
+}
+
+/* Active Game Styling */
+.game-item.active-game {
+  background-color: #f8fff8;
+  border: 2px solid #28a745;
+  box-shadow: 0 4px 8px rgba(40, 167, 69, 0.2);
+}
+
+.game-item.active-game:hover {
+  box-shadow: 0 6px 12px rgba(40, 167, 69, 0.3);
+  transform: translateY(-3px);
+}
+
+.game-info {
+  margin-bottom: 15px;
+}
+
+.game-info div {
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.game-info strong {
+  color: #495057;
+}
+
+.game-actions {
+  text-align: center;
+}
+
+.join-game-btn, .resume-game-btn {
+  padding: 10px 20px;
+  font-size: 14px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  width: 100%;
+}
+
+.join-game-btn {
+  background-color: #17a2b8;
+  color: white;
+}
+
+.join-game-btn:hover:not(:disabled) {
+  background-color: #138496;
+}
+
+.join-game-btn:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+.resume-game-btn {
+  background-color: #28a745;
+  color: white;
+  font-weight: bold;
+}
+
+.resume-game-btn:hover {
+  background-color: #1e7e34;
+  transform: translateY(-1px);
+}
+
+.lobby-stats {
+  text-align: center;
+  margin-top: 30px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  color: #6c757d;
+  font-size: 14px;
+}
+
+.lobby-stats p {
+  margin: 5px 0;
+}
+
+/* Loading state */
+.loading {
+  text-align: center;
+  padding: 40px;
+  font-size: 18px;
+  color: #6c757d;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .lobby-container {
+    padding: 15px;
+  }
+  
+  .lobby-actions {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .create-game-btn, .refresh-btn {
+    width: 100%;
+    max-width: 250px;
+  }
+  
+  .games-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .active-games-list {
+    padding: 15px;
+  }
 }

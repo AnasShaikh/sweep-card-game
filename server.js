@@ -37,27 +37,57 @@ app.use(express.static('dist'));
 const games = {};
 
 // Helper function to get games from database
-const getGamesFromDB = async () => {
+const getGamesFromDB = async (userId = null) => {
   try {
-    const result = await pool.query(`
-      SELECT 
-        g.id,
-        g.status,
-        g.players,
-        g.player_names,
-        u.username as creator_username
-      FROM games g
-      JOIN users u ON g.creator_id = u.id
-      WHERE g.status = 'waiting'
-      ORDER BY g.created_at DESC
-    `);
+    let query, params;
+    
+    if (userId) {
+      // Get both waiting games AND user's active games
+      query = `
+        SELECT 
+          g.id,
+          g.status,
+          g.players,
+          g.player_names,
+          u.username as creator_username,
+          CASE 
+            WHEN (g.players->>'plyr1')::int = $1 OR (g.players->>'plyr2')::int = $1 OR (g.players->>'plyr3')::int = $1 OR (g.players->>'plyr4')::int = $1 THEN 'participant'
+            ELSE 'available'
+          END as user_relation
+        FROM games g
+        JOIN users u ON g.creator_id = u.id
+        WHERE g.status = 'waiting' 
+           OR (g.status = 'playing' AND ((g.players->>'plyr1')::int = $1 OR (g.players->>'plyr2')::int = $1 OR (g.players->>'plyr3')::int = $1 OR (g.players->>'plyr4')::int = $1))
+        ORDER BY g.created_at DESC
+      `;
+      params = [userId];
+    } else {
+      // Original query for waiting games only
+      query = `
+        SELECT 
+          g.id,
+          g.status,
+          g.players,
+          g.player_names,
+          u.username as creator_username,
+          'available' as user_relation
+        FROM games g
+        JOIN users u ON g.creator_id = u.id
+        WHERE g.status = 'waiting'
+        ORDER BY g.created_at DESC
+      `;
+      params = [];
+    }
+    
+    const result = await pool.query(query, params);
     
     return result.rows.map(game => ({
       id: game.id,
       creator: game.creator_username,
       players: Object.values(game.player_names || {}).filter(Boolean).length,
       maxPlayers: 4,
-      status: game.status
+      status: game.status,
+      userRelation: game.user_relation
     }));
   } catch (error) {
     console.error('Error fetching games from database:', error);
@@ -268,7 +298,7 @@ app.post('/api/games', authenticateToken, async (req, res) => {
 // Get available games
 app.get('/api/games', authenticateToken, async (req, res) => {
   try {
-    const availableGames = await getGamesFromDB();
+    const availableGames = await getGamesFromDB(req.user.id);
     res.json(availableGames);
   } catch (error) {
     console.error('Error fetching games:', error);

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 const Lobby = ({ user, authenticatedFetch }) => {
   const [games, setGames] = useState([]);
+  const [activeGames, setActiveGames] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [createGameLoading, setCreateGameLoading] = useState(false);
@@ -22,7 +23,13 @@ const Lobby = ({ user, authenticatedFetch }) => {
       }
       
       const data = await response.json();
-      setGames(data);
+      
+      // Separate waiting games from active games
+      const waitingGames = data.filter(game => game.status === 'waiting');
+      const userActiveGames = data.filter(game => game.status === 'playing' && game.userRelation === 'participant');
+      
+      setGames(waitingGames);
+      setActiveGames(userActiveGames);
       setError('');
     } catch (err) {
       console.error('Error fetching games:', err);
@@ -59,6 +66,10 @@ const Lobby = ({ user, authenticatedFetch }) => {
   };
 
   const joinGame = (gameId) => {
+    navigate(`/game/${gameId}`);
+  };
+
+  const resumeGame = (gameId) => {
     navigate(`/game/${gameId}`);
   };
 
@@ -104,6 +115,38 @@ const Lobby = ({ user, authenticatedFetch }) => {
         </div>
       )}
       
+      {/* Your Active Games Section */}
+      {activeGames.length > 0 && (
+        <div className="active-games-list">
+          <h3>Your Active Games</h3>
+          <div className="games-grid">
+            {activeGames.map((game) => (
+              <div key={game.id} className="game-item active-game">
+                <div className="game-info">
+                  <div className="game-creator">
+                    <strong>Created by:</strong> {game.creator}
+                  </div>
+                  <div className="game-players">
+                    <strong>Players:</strong> {game.players}/{game.maxPlayers}
+                  </div>
+                  <div className="game-status">
+                    <strong>Status:</strong> Playing
+                  </div>
+                </div>
+                <div className="game-actions">
+                  <button 
+                    onClick={() => resumeGame(game.id)}
+                    className="resume-game-btn"
+                  >
+                    Resume Game
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="games-list">
         <h3>Available Games</h3>
         {games.length === 0 ? (

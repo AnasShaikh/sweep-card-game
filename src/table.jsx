@@ -42,6 +42,15 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
     // Initialize game state
     useEffect(() => {
         if (initialGameState) {
+            // ADD DEBUG LINES
+            console.log('=== TABLE INITIALIZATION ===');
+            console.log('Received initialGameState:', initialGameState);
+            console.log('InitialGameState players:', initialGameState?.players);
+            console.log('InitialGameState deck:', initialGameState?.deck);
+            console.log('InitialGameState currentTurn:', initialGameState?.currentTurn);
+            console.log('InitialGameState boardVisible:', initialGameState?.boardVisible);
+            console.log('InitialGameState call:', initialGameState?.call);
+            
             setDeck(initialGameState.deck || initialDeck);
             setPlayers(initialGameState.players || { plyr1: [], plyr2: [], plyr3: [], plyr4: [], board: [] });
             setCurrentTurn(initialGameState.currentTurn || 'plyr2');
@@ -57,6 +66,9 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
             setTeam1Points(initialGameState.team1Points || 0);
             setTeam2Points(initialGameState.team2Points || 0);
             setLastCollector(initialGameState.lastCollector || null);
+        } else {
+            console.log('=== TABLE INITIALIZATION ===');
+            console.log('No initialGameState provided, using defaults');
         }
     }, [initialGameState]);
     
@@ -65,6 +77,11 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
         if (!socket) return;
         
         socket.on('gameAction', ({ player, action, data }) => {
+            console.log('=== RECEIVED GAME ACTION ===');
+            console.log('Player:', player);
+            console.log('Action:', action);
+            console.log('Data:', data);
+            
             switch (action) {
                 case 'dealCards':
                     setPlayers(data.players);
@@ -438,6 +455,14 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
 
     // Calculate selected card value for display
     const selectedHandValue = selectedHandCard ? getCardValue(formatCardName(selectedHandCard)) : 0;
+
+    // ADD FINAL DEBUG LOG TO SEE CURRENT STATE
+    console.log('=== TABLE RENDER STATE ===');
+    console.log('Players state:', players);
+    console.log('Current turn:', currentTurn);
+    console.log('Board visible:', boardVisible);
+    console.log('My position:', position);
+    console.log('Is my turn:', isMyTurn);
 
     return (
         <TableUI
