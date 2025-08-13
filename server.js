@@ -5,6 +5,7 @@ import session from 'express-session';
 import { v4 as uuidv4 } from 'uuid';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import pool from './src/db.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -12,6 +13,7 @@ const __dirname = dirname(__filename);
 const app = express();
 const server = createServer(app);
 const io = new Server(server);
+
 
 // Session middleware
 app.use(session({
@@ -216,6 +218,14 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);
   });
+});
+
+pool.query('SELECT NOW()', (err, res) => {
+  if (err) {
+    console.error('Database test failed:', err);
+  } else {
+    console.log('Database test successful:', res.rows[0]);
+  }
 });
 
 const PORT = process.env.PORT || 3000;
