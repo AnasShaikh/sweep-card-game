@@ -306,7 +306,7 @@ app.get('/api/games', authenticateToken, async (req, res) => {
   }
 });
 
-// Get specific game
+// Get specific game - ENHANCED for better state synchronization
 app.get('/api/games/:gameId', authenticateToken, async (req, res) => {
   const { gameId } = req.params;
   
@@ -321,6 +321,17 @@ app.get('/api/games/:gameId', authenticateToken, async (req, res) => {
     if (!game) {
       return res.status(404).json({ error: 'Game not found' });
     }
+    
+    // CRITICAL: Always sync memory with database for consistency
+    if (game) {
+      games[gameId] = game;
+    }
+    
+    console.log(`Game ${gameId} state retrieved:`, {
+      status: game.status,
+      gameState: game.gameState ? 'present' : 'null',
+      players: game.players
+    });
     
     res.json(game);
   } catch (error) {
@@ -366,6 +377,7 @@ io.on('connection', (socket) => {
     console.log(`User ${userId} trying to join room ${gameId}`);
     
     try {
+      // ALWAYS get fresh state from database for join room
       let game = await getGameFromDB(gameId);
       if (!game) {
         game = games[gameId];
@@ -375,13 +387,21 @@ io.on('connection', (socket) => {
         socket.join(gameId);
         console.log(`Socket ${socket.id} (user: ${userId}) successfully joined room ${gameId}`);
         
+        // Sync memory with database
+        games[gameId] = game;
+        
         socket.emit('gameUpdate', game);
-        console.log(`Sent game state to user ${userId}:`, game);
+        console.log(`Sent fresh game state to user ${userId}:`, {
+          status: game.status,
+          gameState: game.gameState ? 'present' : 'null'
+        });
       } else {
         console.log(`Game ${gameId} not found`);
+        socket.emit('error', 'Game not found');
       }
     } catch (error) {
       console.error('Error in joinRoom:', error);
+      socket.emit('error', 'Server error');
     }
   });
   
@@ -449,59 +469,7 @@ io.on('connection', (socket) => {
         return socket.emit('error', 'Need 4 players to start');
       }
       
-      // Start the game
-      game.status = 'playing';
-      game.gameState = {
-        currentTurn: 'plyr2',
-        moveCount: 0,
-        dealVisible: true,
-        collectedCards: { plyr1: [], plyr2: [], plyr3: [], plyr4: [] }
-      };
-      
-      // Update in database
-      await updateGameInDB(gameId, {
-        status: game.status,
-        gameState: game.gameState
-      });
-      
-      // Update memory storage
-      games[gameId] = game;
-      
-      console.log(`Game ${gameId} started with plyr2 going first`);
-      
-      // Broadcast game start
-      io.to(gameId).emit('gameStarted', game);
-    } catch (error) {
-      console.error('Error in startGame:', error);
-      socket.emit('error', 'Server error');
-    }
-  });
-  
-  // Auto-deal handler for resumed games
-  socket.on('autoDealCards', async ({ userId, gameId }) => {
-    console.log(`Auto-deal cards: ${userId} -> ${gameId}`);
-    
-    try {
-      let game = await getGameFromDB(gameId);
-      if (!game) {
-        game = games[gameId];
-      }
-      
-      if (!game) {
-        return socket.emit('error', 'Game not found');
-      }
-      
-      // Check if this is a valid auto-deal scenario
-      if (game.status !== 'playing' || !game.gameState || game.gameState.moveCount !== 0) {
-        return socket.emit('error', 'Auto-deal not applicable for this game state');
-      }
-      
-      // Verify user is in the game
-      if (!Object.values(game.players).includes(userId)) {
-        return socket.emit('error', 'You are not a participant in this game');
-      }
-      
-      // Auto-deal cards (same logic as manual deal)
+      // FIXED: Start game with cards automatically dealt to prevent limbo states
       const { shuffleDeck } = await import('./src/tableLogic.js');
       const initialDeck = await import('./src/initialDeck.js');
       
@@ -514,39 +482,35 @@ io.on('connection', (socket) => {
         board: shuffledDeck.splice(0, 4)
       };
       
-      // Update game state for auto-dealt cards
-      const newGameState = {
-        ...game.gameState,
+      // Start the game with cards already dealt
+      game.status = 'playing';
+      game.gameState = {
         deck: shuffledDeck,
         players: newPlayers,
         currentTurn: 'plyr2',
-        moveCount: 1,
+        moveCount: 1, // Start at 1 since cards are dealt
         boardVisible: false,
-        dealVisible: false,
-        call: null
+        dealVisible: false, // No deal button needed
+        call: null,
+        collectedCards: { plyr1: [], plyr2: [], plyr3: [], plyr4: [] }
       };
       
-      // Update in database
-      await updateGameInDB(gameId, { gameState: newGameState });
+      // Update in database FIRST
+      await updateGameInDB(gameId, {
+        status: game.status,
+        gameState: game.gameState
+      });
       
-      // Update memory storage
-      game.gameState = newGameState;
+      // Then update memory storage
       games[gameId] = game;
       
-      console.log(`Auto-dealt cards for game ${gameId}`);
+      console.log(`Game ${gameId} started with cards dealt, plyr2 goes first`);
       
-      // Broadcast to all players in the game
-      io.to(gameId).emit('gameAction', { 
-        player: userId, 
-        action: 'autoDealCards', 
-        data: {
-          players: newPlayers,
-          deck: shuffledDeck
-        }
-      });
+      // Broadcast game start with cards already dealt
+      io.to(gameId).emit('gameStarted', game);
     } catch (error) {
-      console.error('Error in autoDealCards:', error);
-      socket.emit('error', 'Server error during auto-deal');
+      console.error('Error in startGame:', error);
+      socket.emit('error', 'Server error');
     }
   });
   
@@ -572,12 +536,12 @@ io.on('connection', (socket) => {
       // Update game status to terminated
       game.status = 'terminated';
       
-      // Update in database
+      // Update in database FIRST
       await updateGameInDB(gameId, {
         status: 'terminated'
       });
       
-      // Update memory storage
+      // Then update memory storage
       games[gameId] = game;
       
       console.log(`Game ${gameId} terminated by user ${userId}`);
@@ -608,11 +572,17 @@ io.on('connection', (socket) => {
       if (action === 'updateGameState') {
         game.gameState = data;
         
-        // Update in database
+        // Update in database FIRST
         await updateGameInDB(gameId, { gameState: data });
         
-        // Update memory storage
+        // Then update memory storage
         games[gameId] = game;
+        
+        console.log(`Game ${gameId} state updated by ${userId}:`, {
+          action,
+          moveCount: data.moveCount,
+          currentTurn: data.currentTurn
+        });
       }
       
       // Broadcast to all players in the game

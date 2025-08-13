@@ -36,21 +36,24 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
     const [team1Points, setTeam1Points] = useState(0);
     const [team2Points, setTeam2Points] = useState(0);
     const [lastCollector, setLastCollector] = useState(null); // Track who picked up cards last
+    const [initialized, setInitialized] = useState(false);
     
     const gameStateRef = useRef();
+    const socketListenerSetup = useRef(false);
     
-    // Initialize game state
+    // Initialize game state - ONLY run once when component mounts or initialGameState changes
     useEffect(() => {
+        console.log('=== TABLE INITIALIZATION ===');
+        console.log('Received initialGameState:', initialGameState);
+        
         if (initialGameState) {
-            // ADD DEBUG LINES
-            console.log('=== TABLE INITIALIZATION ===');
-            console.log('Received initialGameState:', initialGameState);
             console.log('InitialGameState players:', initialGameState?.players);
             console.log('InitialGameState deck:', initialGameState?.deck);
             console.log('InitialGameState currentTurn:', initialGameState?.currentTurn);
             console.log('InitialGameState boardVisible:', initialGameState?.boardVisible);
             console.log('InitialGameState call:', initialGameState?.call);
             
+            // Set all state from initialGameState
             setDeck(initialGameState.deck || initialDeck);
             setPlayers(initialGameState.players || { plyr1: [], plyr2: [], plyr3: [], plyr4: [], board: [] });
             setCurrentTurn(initialGameState.currentTurn || 'plyr2');
@@ -66,17 +69,27 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
             setTeam1Points(initialGameState.team1Points || 0);
             setTeam2Points(initialGameState.team2Points || 0);
             setLastCollector(initialGameState.lastCollector || null);
+            
+            // Clear selections on state load
+            setSelectedHandCard(null);
+            setSelectedTableCards([]);
+            setSelectedStackToAddTo(null);
+            
+            setInitialized(true);
         } else {
-            console.log('=== TABLE INITIALIZATION ===');
             console.log('No initialGameState provided, using defaults');
+            setInitialized(true);
         }
-    }, [initialGameState]);
+    }, [initialGameState]); // Only depend on initialGameState
     
-    // Listen for game actions
+    // Set up socket listeners - ONLY run once when socket changes
     useEffect(() => {
-        if (!socket) return;
+        if (!socket || socketListenerSetup.current) return;
         
-        socket.on('gameAction', ({ player, action, data }) => {
+        console.log('=== SETTING UP SOCKET LISTENERS ===');
+        socketListenerSetup.current = true;
+        
+        const handleGameAction = ({ player, action, data }) => {
             console.log('=== RECEIVED GAME ACTION ===');
             console.log('Player:', player);
             console.log('Action:', action);
@@ -84,7 +97,6 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
             
             switch (action) {
                 case 'dealCards':
-                case 'autoDealCards': // Handle both manual and auto-deal
                     setPlayers(data.players);
                     setDeck(data.deck);
                     setMoveCount(1);
@@ -148,10 +160,13 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
                 default:
                     break;
             }
-        });
+        };
+        
+        socket.on('gameAction', handleGameAction);
         
         return () => {
-            socket.off('gameAction');
+            socket.off('gameAction', handleGameAction);
+            socketListenerSetup.current = false;
         };
     }, [socket]);
     
@@ -175,9 +190,9 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
         return null;
     };
     
-    // Update game state - FIXED to prevent infinite loop
+    // Update game state - ONLY run when initialized and state actually changes
     useEffect(() => {
-        if (!onGameAction) return;
+        if (!onGameAction || !initialized) return;
         
         const gameState = {
             deck,
@@ -198,41 +213,19 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
         };
         
         // Only update if game state actually changed
-        if (JSON.stringify(gameState) !== JSON.stringify(gameStateRef.current)) {
+        const currentStateString = JSON.stringify(gameState);
+        const previousStateString = JSON.stringify(gameStateRef.current);
+        
+        if (currentStateString !== previousStateString) {
             gameStateRef.current = gameState;
             onGameAction('updateGameState', gameState);
         }
-    }); // Removed dependencies to prevent infinite loop
-
-    const dealCards = () => {
-        let shuffledDeck = shuffleDeck([...deck]);
-        let newPlayers = {
-            plyr1: shuffledDeck.splice(0, 4),
-            plyr2: shuffledDeck.splice(0, 4),
-            plyr3: shuffledDeck.splice(0, 4),
-            plyr4: shuffledDeck.splice(0, 4),
-            board: shuffledDeck.splice(0, 4)
-        };
-        
-        setPlayers(newPlayers);
-        setDeck(shuffledDeck);
-        setMoveCount(1);
-        setCurrentTurn('plyr2'); // plyr2 starts first
-        setCall(null);
-        setBoardVisible(false);
-        setSelectedHandCard(null);
-        setSelectedTableCards([]);
-        setSelectedStackToAddTo(null);
-        setDealVisible(false);
-        setLastCollector(null); // Reset last collector for new round
-        
-        if (onGameAction) {
-            onGameAction('dealCards', {
-                players: newPlayers,
-                deck: shuffledDeck
-            });
-        }
-    };
+    }, [
+        initialized, onGameAction, deck, players, currentTurn, moveCount, call, 
+        boardVisible, collectedCards, dealVisible, remainingCardsDealt, 
+        showDRCButton, team1SeepCount, team2SeepCount, team1Points, 
+        team2Points, lastCollector
+    ]);
 
     const dealRemainingCards = () => {
         let remainingCards = [...deck];
@@ -457,13 +450,18 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
     // Calculate selected card value for display
     const selectedHandValue = selectedHandCard ? getCardValue(formatCardName(selectedHandCard)) : 0;
 
-    // ADD FINAL DEBUG LOG TO SEE CURRENT STATE
+    // Don't render until initialized
+    if (!initialized) {
+        return <div className="loading">Initializing game...</div>;
+    }
+
     console.log('=== TABLE RENDER STATE ===');
     console.log('Players state:', players);
     console.log('Current turn:', currentTurn);
     console.log('Board visible:', boardVisible);
     console.log('My position:', position);
     console.log('Is my turn:', isMyTurn);
+    console.log('Initialized:', initialized);
 
     return (
         <TableUI
@@ -494,7 +492,7 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
             onHandCardSelection={handleHandCardSelection}
             onTableCardSelection={handleTableCardSelection}
             onExistingStackSelection={handleExistingStackSelection}
-            onDealCards={dealCards}
+            onDealCards={null} // REMOVED: No longer needed
             onDealRemainingCards={dealRemainingCards}
             onCall={handleCall}
             onPickup={handlePickupAction}

@@ -9,7 +9,7 @@ import {
     getCardValue,
     calculatePoints,
     checkValidCalls,
-    getStackCreator,    // ADD THIS
+    getStackCreator,
     isTeammate     
 } from './tableLogic';
 
@@ -54,7 +54,7 @@ export default function TableUI({
     onHandCardSelection,
     onTableCardSelection,
     onExistingStackSelection,
-    onDealCards,
+    onDealCards, // This will be null now
     onDealRemainingCards,
     onCall,
     onPickup,
@@ -290,7 +290,7 @@ export default function TableUI({
             </div>
             
             <div className="controls">
-                {position === 'plyr1' && dealVisible && <button onClick={onDealCards}>Deal Cards</button>}
+                {/* REMOVED: Deal Cards button - no longer needed since cards are dealt on game start */}
                 {isMyTurn && showDRCButton && <button onClick={onDealRemainingCards}>Deal Remaining Cards</button>}
                 
                 {isMyTurn && moveCount === 1 && currentTurn === 'plyr2' && !call && (

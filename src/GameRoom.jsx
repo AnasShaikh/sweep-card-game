@@ -8,22 +8,23 @@ const GameRoom = ({ user, authenticatedFetch }) => {
   const [game, setGame] = useState(null);
   const [socket, setSocket] = useState(null);
   const [error, setError] = useState('');
+  const [gameStateLoaded, setGameStateLoaded] = useState(false);
   const navigate = useNavigate();
   
-  // Use ref to track auto-deal to avoid stale closures and ensure proper cleanup
-  const autoDealtRef = useRef(false);
   const socketRef = useRef(null);
-  
-  // Reset auto-deal tracking when gameId changes (navigating between games)
-  useEffect(() => {
-    autoDealtRef.current = false;
-  }, [gameId]);
+  const gameStateRef = useRef(null);
   
   useEffect(() => {
     // Clean up previous socket if exists
     if (socketRef.current) {
       socketRef.current.disconnect();
     }
+    
+    // Reset state when navigating to different game
+    setGameStateLoaded(false);
+    setGame(null);
+    setError('');
+    gameStateRef.current = null;
     
     const newSocket = io();
     setSocket(newSocket);
@@ -49,25 +50,29 @@ const GameRoom = ({ user, authenticatedFetch }) => {
     // Define event handlers
     const handleGameUpdate = (updatedGame) => {
       console.log(`${user.username} received game update:`, updatedGame);
-      setGame(updatedGame);
       
-      // Reset auto-deal flag when game returns to waiting status
-      if (updatedGame.status === 'waiting') {
-        autoDealtRef.current = false;
+      // Only update if this is more recent than what we have
+      const currentTimestamp = gameStateRef.current?.timestamp || 0;
+      const newTimestamp = Date.now();
+      
+      if (newTimestamp > currentTimestamp) {
+        gameStateRef.current = { ...updatedGame, timestamp: newTimestamp };
+        setGame(updatedGame);
+        setGameStateLoaded(true);
       }
     };
     
     const handleGameStarted = (startedGame) => {
       console.log(`${user.username} received game started:`, startedGame);
+      const timestamp = Date.now();
+      gameStateRef.current = { ...startedGame, timestamp };
       setGame(startedGame);
+      setGameStateLoaded(true);
     };
     
     const handleGameTerminated = ({ terminatedBy, gameId }) => {
       console.log(`Game ${gameId} was terminated by user ${terminatedBy}`);
       setError(`Game was terminated by a player`);
-      
-      // Reset auto-deal flag on termination
-      autoDealtRef.current = false;
       
       // Redirect to lobby after 3 seconds
       setTimeout(() => {
@@ -107,46 +112,9 @@ const GameRoom = ({ user, authenticatedFetch }) => {
     };
   }, [gameId, user.id, user.username, navigate]); 
   
-  // Auto-deal detection with proper state management
-  useEffect(() => {
-    // Only run if we have all required data and haven't already triggered auto-deal
-    if (!game || !socket || autoDealtRef.current) return;
-    
-    // Check for limbo state: playing + moveCount 0 + user is participant
-    if (game.status === 'playing' && 
-        game.gameState && 
-        game.gameState.moveCount === 0 && 
-        Object.values(game.players).includes(user.id)) {
-      
-      // Check if cards have been dealt
-      const hasPlayerCards = game.gameState.players && 
-        Object.keys(game.gameState.players).some(playerKey => {
-          if (playerKey === 'board') return false;
-          const hand = game.gameState.players[playerKey];
-          return Array.isArray(hand) && hand.length > 0;
-        });
-      
-      const hasBoardCards = game.gameState.players && 
-        Array.isArray(game.gameState.players.board) && 
-        game.gameState.players.board.length > 0;
-      
-      if (!hasPlayerCards && !hasBoardCards) {
-        // TRUE LIMBO: Auto-deal needed
-        console.log('=== AUTO-DEAL TRIGGERED ===');
-        console.log('Game in limbo state - no cards dealt yet');
-        
-        autoDealtRef.current = true; // Set flag immediately to prevent re-triggers
-        socket.emit('autoDealCards', { userId: user.id, gameId });
-      } else {
-        // NORMAL RESUME: Game has cards, just resuming
-        console.log('=== NORMAL RESUME ===');
-        console.log('Game has cards - normal resume');
-      }
-    }
-  }, [game, socket, user.id, gameId]);
-  
   const loadGame = async () => {
     try {
+      console.log(`Loading game ${gameId} from database...`);
       const response = await authenticatedFetch(`/api/games/${gameId}`);
       
       if (!response.ok) {
@@ -155,8 +123,13 @@ const GameRoom = ({ user, authenticatedFetch }) => {
       }
       
       const data = await response.json();
-      console.log('Game loaded:', data);
+      console.log('Game loaded from database:', data);
+      
+      // Always use database state as source of truth for resume
+      const timestamp = Date.now();
+      gameStateRef.current = { ...data, timestamp };
       setGame(data);
+      setGameStateLoaded(true);
       setError('');
     } catch (err) {
       console.error('Error loading game:', err);
@@ -258,8 +231,8 @@ const GameRoom = ({ user, authenticatedFetch }) => {
     return <div className="loading">Loading game...</div>;
   }
   
-  // Show table if game is playing
-  if (game && game.status === 'playing') {
+  // Show table if game is playing - but only after game state is properly loaded
+  if (game && game.status === 'playing' && gameStateLoaded) {
     const userPosition = getUserPosition();
     
     if (!userPosition) {
@@ -274,9 +247,16 @@ const GameRoom = ({ user, authenticatedFetch }) => {
       );
     }
     
+    // Add debug logging for Table component
+    console.log('=== RENDERING TABLE COMPONENT ===');
+    console.log('Game state being passed to Table:', game.gameState);
+    console.log('User position:', userPosition);
+    console.log('Player names:', game.playerNames);
+    
     return (
       <div className="game-room">
         <Table 
+          key={`${gameId}-${gameStateLoaded}-${Date.now()}`} // Force re-render on state load
           gameId={gameId}
           user={user}
           position={userPosition}
@@ -298,6 +278,11 @@ const GameRoom = ({ user, authenticatedFetch }) => {
         </div>
       </div>
     );
+  }
+  
+  // Show loading while game state is being loaded for playing games
+  if (game && game.status === 'playing' && !gameStateLoaded) {
+    return <div className="loading">Loading game state...</div>;
   }
   
   // Show waiting room
