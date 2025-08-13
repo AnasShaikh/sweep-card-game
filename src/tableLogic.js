@@ -138,7 +138,7 @@ export const findAllPickupCombinations = (handCardValue, boardCards, selectedTab
         );
         
         // Check if combination value is a multiple of hand card value
-        if (comboValue > 0 && comboValue % handCardValue === 0) {
+        if (comboValue === handCardValue) {
             // Make sure none of these cards are already picked up
             const canAddCombo = combo.every(card => !allPickupCards.includes(card));
             if (canAddCombo) {
