@@ -170,6 +170,14 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
         };
     }, [socket]);
     
+    // Auto-deal remaining cards after move 3
+    useEffect(() => {
+        if (moveCount === 4 && !remainingCardsDealt && initialized) {
+            console.log('Auto-dealing remaining cards after move 3...');
+            dealRemainingCards();
+        }
+    }, [moveCount, remainingCardsDealt, initialized]);
+    
     // Check for end of round and assign remaining cards
     const checkEndOfRound = (newPlayers, newCollectedCards, newLastCollector) => {
         // Check if all players' hands are empty
@@ -475,7 +483,7 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
             moveCount={moveCount}
             isMyTurn={isMyTurn}
             dealVisible={dealVisible}
-            showDRCButton={showDRCButton}
+            showDRCButton={false} // Never show button since auto-deal is enabled
             
             // Selection State
             selectedHandCard={selectedHandCard}

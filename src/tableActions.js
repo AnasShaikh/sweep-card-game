@@ -289,7 +289,7 @@ export const confirmAddToStack = (
     }
 
     // Update the existing stack - remove selected table cards from board (excluding the target stack)
-    const newBoard = players.board.filter(card => 
+    let newBoard = players.board.filter(card => 
         card !== selectedStackToAddTo && !selectedTableCards.filter(tc => tc !== selectedStackToAddTo).includes(card)
     );
     
@@ -297,7 +297,33 @@ export const confirmAddToStack = (
     const otherSelectedCards = selectedTableCards.filter(card => card !== selectedStackToAddTo);
     const allSelectedCards = [selectedHandCard, ...otherSelectedCards];
     const originalCards = selectedStackToAddTo.split(': ')[1] || '';
-    newBoard.push(`Stack of ${newStackValue} (by ${currentTurn}): ${originalCards} + ${allSelectedCards.join(' + ')}`);
+    const newStackString = `Stack of ${newStackValue} (by ${currentTurn}): ${originalCards} + ${allSelectedCards.join(' + ')}`;
+    
+    // STACK MERGING LOGIC: Check if there's another stack with the same value
+    const existingStackWithSameValue = newBoard.find(card => 
+        card.startsWith('Stack of') && getStackValue(card) === newStackValue
+    );
+    
+    if (existingStackWithSameValue) {
+        console.log(`Found existing Stack of ${newStackValue}, merging stacks...`);
+        
+        // Remove the existing stack from board
+        newBoard = newBoard.filter(card => card !== existingStackWithSameValue);
+        
+        // Extract ONLY the card names from both stacks (not the full strings)
+        const existingStackCards = existingStackWithSameValue.split(': ')[1] || '';
+        const newStackCards = originalCards + (originalCards ? ' + ' : '') + allSelectedCards.join(' + ');
+        
+        // Keep the original creator of the first stack
+        const originalCreator = getStackCreator(existingStackWithSameValue);
+        const mergedStackString = `Stack of ${newStackValue} (by ${originalCreator}): ${existingStackCards} + ${newStackCards}`;
+        newBoard.push(mergedStackString);
+        
+        console.log(`Merged stack created: ${mergedStackString} (original creator: ${originalCreator})`);
+    } else {
+        // No existing stack with same value, just add the new/modified stack
+        newBoard.push(newStackString);
+    }
 
     const newHand = players[currentTurn].filter(card => card !== selectedHandCard);
     const nextPlayerTurn = nextPlayer(currentTurn);

@@ -451,30 +451,37 @@ io.on('connection', (socket) => {
   });
   
   socket.on('startGame', async ({ userId, gameId }) => {
-    console.log(`Start game: ${userId} -> ${gameId}`);
+  console.log(`Start game: ${userId} -> ${gameId}`);
+  
+  try {
+    let game = await getGameFromDB(gameId);
+    if (!game) {
+      game = games[gameId];
+    }
     
-    try {
-      let game = await getGameFromDB(gameId);
-      if (!game) {
-        game = games[gameId];
-      }
-      
-      if (!game) {
-        return socket.emit('error', 'Game not found');
-      }
-      
-      // Check if all positions filled
-      const playerCount = Object.values(game.players).filter(Boolean).length;
-      if (playerCount !== 4) {
-        return socket.emit('error', 'Need 4 players to start');
-      }
-      
-      // FIXED: Start game with cards automatically dealt to prevent limbo states
-      const { shuffleDeck } = await import('./src/tableLogic.js');
-      const initialDeck = await import('./src/initialDeck.js');
-      
-      let shuffledDeck = shuffleDeck([...initialDeck.default]);
-      let newPlayers = {
+    if (!game) {
+      return socket.emit('error', 'Game not found');
+    }
+    
+    // Check if all positions filled
+    const playerCount = Object.values(game.players).filter(Boolean).length;
+    if (playerCount !== 4) {
+      return socket.emit('error', 'Need 4 players to start');
+    }
+    
+    // Import required functions
+    const { shuffleDeck, getCardValue, formatCardName, checkValidCalls } = await import('./src/tableLogic.js');
+    const initialDeck = await import('./src/initialDeck.js');
+    
+    let attempts = 0;
+    const maxAttempts = 50; // Prevent infinite loop
+    let newPlayers;
+    let shuffledDeck;
+    
+    // Keep redistributing cards until plyr2 has valid call cards
+    do {
+      shuffledDeck = shuffleDeck([...initialDeck.default]);
+      newPlayers = {
         plyr1: shuffledDeck.splice(0, 4),
         plyr2: shuffledDeck.splice(0, 4), 
         plyr3: shuffledDeck.splice(0, 4),
@@ -482,37 +489,63 @@ io.on('connection', (socket) => {
         board: shuffledDeck.splice(0, 4)
       };
       
-      // Start the game with cards already dealt
-      game.status = 'playing';
-      game.gameState = {
-        deck: shuffledDeck,
-        players: newPlayers,
-        currentTurn: 'plyr2',
-        moveCount: 1, // Start at 1 since cards are dealt
-        boardVisible: false,
-        dealVisible: false, // No deal button needed
-        call: null,
-        collectedCards: { plyr1: [], plyr2: [], plyr3: [], plyr4: [] }
-      };
+      attempts++;
       
-      // Update in database FIRST
-      await updateGameInDB(gameId, {
-        status: game.status,
-        gameState: game.gameState
-      });
+      // Check if plyr2 has any valid call cards (9, 10, 11, 12, 13)
+      const validCalls = checkValidCalls(newPlayers.plyr2);
       
-      // Then update memory storage
-      games[gameId] = game;
+      if (validCalls.length > 0) {
+        console.log(`Valid deal found after ${attempts} attempts. Plyr2 can call: ${validCalls.join(', ')}`);
+        break;
+      }
       
-      console.log(`Game ${gameId} started with cards dealt, plyr2 goes first`);
+      console.log(`Attempt ${attempts}: Plyr2 has no valid call cards, redistributing...`);
       
-      // Broadcast game start with cards already dealt
-      io.to(gameId).emit('gameStarted', game);
-    } catch (error) {
-      console.error('Error in startGame:', error);
-      socket.emit('error', 'Server error');
-    }
-  });
+      if (attempts >= maxAttempts) {
+        console.error(`Failed to find valid deal after ${maxAttempts} attempts`);
+        return socket.emit('error', 'Unable to deal valid cards. Please try again.');
+      }
+      
+    } while (true);
+    
+    // Start the game with valid card distribution
+    game.status = 'playing';
+    game.gameState = {
+      deck: shuffledDeck,
+      players: newPlayers,
+      currentTurn: 'plyr2',
+      moveCount: 1, // Start at 1 since cards are dealt
+      boardVisible: false,
+      dealVisible: false, // No deal button needed
+      call: null,
+      collectedCards: { plyr1: [], plyr2: [], plyr3: [], plyr4: [] },
+      remainingCardsDealt: false,
+      showDRCButton: false,
+      team1SeepCount: 0,
+      team2SeepCount: 0,
+      team1Points: 0,
+      team2Points: 0,
+      lastCollector: null
+    };
+    
+    // Update in database FIRST
+    await updateGameInDB(gameId, {
+      status: game.status,
+      gameState: game.gameState
+    });
+    
+    // Then update memory storage
+    games[gameId] = game;
+    
+    console.log(`Game ${gameId} started with valid card distribution after ${attempts} attempts. Plyr2 goes first.`);
+    
+    // Broadcast game start with cards already dealt
+    io.to(gameId).emit('gameStarted', game);
+  } catch (error) {
+    console.error('Error in startGame:', error);
+    socket.emit('error', 'Server error');
+  }
+});
   
   // NEW: Terminate game handler
   socket.on('terminateGame', async ({ userId, gameId }) => {
