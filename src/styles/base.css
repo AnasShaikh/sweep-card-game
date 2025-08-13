@@ -1,0 +1,132 @@
+/* Base Styles - Global settings, variables, and common elements */
+
+/* Enhanced Game Table Styles - Refined & Responsive */
+
+/* Main game container with elegant, sober background */
+main {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 15px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 50%, #dee2e6 100%);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #495057;
+  overflow-x: auto;
+  overflow-y: auto;
+}
+
+/* Ensure scrolling works */
+body {
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+}
+
+/* Enhanced header with subtle glass effect */
+.header {
+  display: flex;
+  width: 100%;
+  max-width: 1400px;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  padding: 15px 25px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.header h1 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 2.2rem;
+  font-weight: 600;
+  text-shadow: none;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  color: #495057;
+  font-weight: 500;
+  font-size: 16px;
+}
+
+.logout-btn {
+  background: linear-gradient(145deg, #dc3545, #c82333);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(220, 53, 69, 0.2);
+}
+
+.logout-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+}
+
+/* Enhanced buttons with subtle styling */
+button {
+  background: linear-gradient(145deg, #6c757d, #5a6268);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  margin: 4px;
+  font-weight: 500;
+  font-size: 13px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(108, 117, 125, 0.2);
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(108, 117, 125, 0.3);
+  background: linear-gradient(145deg, #5a6268, #495057);
+}
+
+button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(108, 117, 125, 0.2);
+}
+
+.clear-btn {
+  background: linear-gradient(145deg, #dc3545, #c82333) !important;
+  box-shadow: 0 2px 6px rgba(220, 53, 69, 0.2) !important;
+}
+
+.clear-btn:hover {
+  background: linear-gradient(145deg, #c82333, #bd2130) !important;
+  box-shadow: 0 4px 10px rgba(220, 53, 69, 0.3) !important;
+}
+
+/* Responsive design fixes */
+@media (max-width: 768px) {
+  main {
+    padding: 10px;
+  }
+  
+  .header {
+    padding: 10px 15px;
+  }
+  
+  .header h1 {
+    font-size: 1.6rem;
+  }
+  
+  button {
+    padding: 8px 14px;
+    font-size: 12px;
+  }
+}
