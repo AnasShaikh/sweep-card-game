@@ -284,10 +284,10 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
         }
     };
 
-    const handlePerformPickup = () => {
+    const handlePerformPickup = (allTableCards) => {
         const result = performPickup(
             selectedHandCard,
-            selectedTableCards,
+            allTableCards,
             players,
             currentTurn,
             collectedCards,
@@ -320,6 +320,7 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
             selectedTableCards,
             call,
             moveCount,
+            players,
             handlePerformPickup
         );
     };

@@ -8,8 +8,23 @@ import {
     formatCardName,
     getCardValue,
     calculatePoints,
-    checkValidCalls
+    checkValidCalls,
+    getStackCreator,    // ADD THIS
+    isTeammate     
 } from './tableLogic';
+
+const getCreatorDisplayName = (stackString, currentPosition, playerNames) => {
+    const creator = getStackCreator(stackString);
+    if (!creator) return '';
+    
+    if (creator === currentPosition) {
+        return 'You';
+    } else if (isTeammate(creator, currentPosition)) {
+        return `${playerNames[creator]} (Teammate)`;
+    } else {
+        return `${playerNames[creator]} (Opponent)`;
+    }
+};
 
 export default function TableUI({
     // Game State
@@ -103,9 +118,9 @@ export default function TableUI({
                             );
                         })}
                         <div className="stackLabel">
-                            Stack of {stackValue} 
-                            {isLooseStack(card) ? ' (Loose)' : ' (Tight)'}
-                            <div>Total: {getStackTotalPoints(card)} pts, {getStackCardCount(card)} cards</div>
+                                Stack of {stackValue} (by {getCreatorDisplayName(card, position, playerNames)})
+                                {isLooseStack(card) ? ' - Loose' : ' - Tight'}
+                                <div>Total: {getStackTotalPoints(card)} pts, {getStackCardCount(card)} cards</div>
                             {isMyTurn && (
                                 <div className="stack-actions">
                                     <button 

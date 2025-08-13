@@ -369,3 +369,83 @@ button:hover {
   gap: 10px;
   margin-top: 15px;
 }
+
+
+/* Stack Creator Styling */
+.stackLabel {
+  font-size: 12px;
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 8px;
+  border-radius: 4px;
+  margin-top: 5px;
+  text-align: center;
+}
+
+.stackCard {
+  position: relative;
+  display: inline-block;
+  margin: 5px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  padding: 5px;
+}
+
+.stackCard.selected {
+  border-color: #f39c12;
+  background-color: #f7dc6f;
+}
+
+.stackCard.selected-for-add {
+  border-color: #e74c3c;
+  background-color: #fadbd8;
+}
+
+.stackCard.can-add {
+  border-color: #27ae60;
+}
+
+.stackCard.cannot-add {
+  opacity: 0.6;
+}
+
+.stackedCard {
+  display: inline-block;
+  margin-right: 2px;
+}
+
+.stack-actions {
+  display: flex;
+  gap: 5px;
+  margin-top: 5px;
+  justify-content: center;
+}
+
+.stack-action-btn {
+  background-color: #3498db;
+  color: white;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 10px;
+}
+
+.stack-action-btn:hover {
+  background-color: #2980b9;
+}
+
+.clear-btn {
+  background-color: #e74c3c !important;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin: 5px;
+}
+
+.clear-btn:hover {
+  background-color: #c0392b !important;
+}

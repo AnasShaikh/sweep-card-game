@@ -50,10 +50,10 @@ export const isLooseStack = (stackString) => {
 
 // Get creator of a stack from board
 export const getStackCreator = (stackString) => {
-    // This is a simplified approach - in a real game you'd track stack creators
-    // For now, we'll assume recent stacks are from recent players
-    // This could be enhanced by storing creator info in stack strings
-    return null; // Would need to be implemented based on your game state tracking
+    if (!stackString || !stackString.startsWith('Stack of ')) return null;
+    
+    const creatorMatch = stackString.match(/\(by (plyr[1-4])\)/);
+    return creatorMatch ? creatorMatch[1] : null;
 };
 
 // Check if player can add to a specific stack
@@ -105,6 +105,67 @@ export const canModifyStackValue = (stackString, playerPos) => {
     
     // Anyone can modify loose stacks by adding 1-4 cards
     return true;
+};
+
+// Find all cards that can be picked up with the given hand card value
+export const findAllPickupCombinations = (handCardValue, boardCards, selectedTableCards) => {
+    const allPickupCards = [...selectedTableCards]; // Start with manually selected cards
+    const remainingCards = boardCards.filter(card => !selectedTableCards.includes(card));
+    
+    // Find all single cards/stacks that match the hand card value
+    const matchingSingleCards = remainingCards.filter(card => {
+        if (card.startsWith('Stack of')) {
+            return getStackValue(card) === handCardValue;
+        } else {
+            return getCardValue(formatCardName(card)) === handCardValue;
+        }
+    });
+    
+    allPickupCards.push(...matchingSingleCards);
+    
+    // Find combinations of non-stack cards that sum to multiples of hand card value
+    const nonStackCards = remainingCards.filter(card => 
+        !card.startsWith('Stack of') && 
+        !matchingSingleCards.includes(card)
+    );
+    
+    // Generate all possible combinations of remaining non-stack cards
+    const combinations = getAllCombinations(nonStackCards);
+    
+    for (const combo of combinations) {
+        const comboValue = combo.reduce((sum, card) => 
+            sum + getCardValue(formatCardName(card)), 0
+        );
+        
+        // Check if combination value is a multiple of hand card value
+        if (comboValue > 0 && comboValue % handCardValue === 0) {
+            // Make sure none of these cards are already picked up
+            const canAddCombo = combo.every(card => !allPickupCards.includes(card));
+            if (canAddCombo) {
+                allPickupCards.push(...combo);
+            }
+        }
+    }
+    
+    return allPickupCards;
+};
+
+// Helper function to generate all possible combinations of an array
+const getAllCombinations = (arr) => {
+    const result = [];
+    
+    // Generate all possible combinations (2^n - 1, excluding empty set)
+    for (let i = 1; i < Math.pow(2, arr.length); i++) {
+        const combo = [];
+        for (let j = 0; j < arr.length; j++) {
+            if (i & Math.pow(2, j)) {
+                combo.push(arr[j]);
+            }
+        }
+        result.push(combo);
+    }
+    
+    return result;
 };
 
 // Card and deck utilities

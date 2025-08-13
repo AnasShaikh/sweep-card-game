@@ -10,7 +10,8 @@ import {
     isOpponent,
     formatCardName,
     getCardValue,
-    nextPlayer
+    nextPlayer,
+    findAllPickupCombinations
 } from './tableLogic';
 
 export const confirmStack = (
@@ -42,6 +43,13 @@ export const confirmStack = (
 
     if (selectedTableCards.length === 0) {
         alert("Please select one or more cards from the table.");
+        return;
+    }
+
+    // Check maximum 2 stacks rule
+    const currentStackCount = players.board.filter(card => card.startsWith('Stack of')).length;
+    if (currentStackCount >= 2) {
+        alert("There can only be a maximum of 2 stacks on the table at one time.");
         return;
     }
 
@@ -104,7 +112,7 @@ export const confirmStack = (
 
     // Create new stack
     const newBoard = players.board.filter(card => !selectedTableCards.includes(card));
-    newBoard.push(`Stack of ${stackValue}: ${selectedHandCard} + ${selectedTableCards.join(' + ')}`);
+    newBoard.push(`Stack of ${stackValue} (by ${currentTurn}): ${selectedHandCard} + ${selectedTableCards.join(' + ')}`);
 
     const newHand = players[currentTurn].filter(card => card !== selectedHandCard);
     const nextPlayerTurn = nextPlayer(currentTurn);
@@ -281,7 +289,7 @@ export const confirmAddToStack = (
     const otherSelectedCards = selectedTableCards.filter(card => card !== selectedStackToAddTo);
     const allSelectedCards = [selectedHandCard, ...otherSelectedCards];
     const originalCards = selectedStackToAddTo.split(': ')[1] || '';
-    newBoard.push(`Stack of ${newStackValue}: ${originalCards} + ${allSelectedCards.join(' + ')}`);
+    newBoard.push(`Stack of ${newStackValue} (by ${currentTurn}): ${originalCards} + ${allSelectedCards.join(' + ')}`);
 
     const newHand = players[currentTurn].filter(card => card !== selectedHandCard);
     const nextPlayerTurn = nextPlayer(currentTurn);
@@ -321,6 +329,7 @@ export const handlePickup = (
     selectedTableCards,
     call,
     moveCount,
+    players,
     performPickupFn
 ) => {
     if (!selectedHandCard) {
@@ -334,6 +343,11 @@ export const handlePickup = (
     }
 
     const handCardValue = getCardValue(formatCardName(selectedHandCard));
+    
+    // Find ALL cards that can be picked up with this hand card (auto-expansion)
+    const allPickupCards = findAllPickupCombinations(handCardValue, players.board, selectedTableCards);
+    
+    // Validate the manually selected cards first
     const tableCardsValue = selectedTableCards.reduce((sum, card) => {
         if (card.startsWith("Stack of")) {
             const stackValue = getStackValue(card);
@@ -349,13 +363,13 @@ export const handlePickup = (
         }
 
         if (tableCardsValue % handCardValue === 0) {
-            performPickupFn();
+            performPickupFn(allPickupCards);
         } else {
             alert(`The selected cards' total value is not divisible by your card's value (${handCardValue}).`);
         }
     } else {
         if (handCardValue === tableCardsValue || tableCardsValue % handCardValue === 0) {
-            performPickupFn();
+            performPickupFn(allPickupCards);
         } else {
             alert("The selected cards do not add up to or are not divisible by the value of the card in your hand.");
         }
@@ -364,7 +378,7 @@ export const handlePickup = (
 
 export const performPickup = (
     selectedHandCard,
-    selectedTableCards,
+    allTableCards,
     players,
     currentTurn,
     collectedCards,
@@ -375,7 +389,7 @@ export const performPickup = (
     moveCount,
     onGameAction
 ) => {
-    const newBoard = players.board.filter(card => !selectedTableCards.includes(card) && !card.includes(`Stack of ${getCardValue(formatCardName(selectedHandCard))}`));
+    const newBoard = players.board.filter(card => !allTableCards.includes(card));
     const newHand = players[currentTurn].filter(card => card !== selectedHandCard);
 
     const boardCleared = newBoard.length === 0;
@@ -407,7 +421,7 @@ export const performPickup = (
     
     const newCollectedCards = {
         ...collectedCards,
-        [currentTurn]: [...collectedCards[currentTurn], selectedHandCard, ...selectedTableCards]
+        [currentTurn]: [...collectedCards[currentTurn], selectedHandCard, ...allTableCards]
     };
     
     const nextPlayerTurn = nextPlayer(currentTurn);
