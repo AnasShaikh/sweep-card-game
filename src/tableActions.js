@@ -29,6 +29,7 @@ export const confirmStack = (
     team2Points,
     team1SeepCount,
     team2SeepCount,
+    lastCollector,
     confirmAddToStackFn
 ) => {
     // Adding to existing stack
@@ -139,7 +140,8 @@ export const confirmStack = (
             team2Points,
             team1SeepCount,
             team2SeepCount,
-            showDRCButton: nextShowDRCButton
+            showDRCButton: nextShowDRCButton,
+            lastCollector // Pass through last collector (unchanged for stack action)
         });
     }
 
@@ -147,7 +149,8 @@ export const confirmStack = (
         newPlayers,
         nextPlayerTurn,
         nextMoveCount,
-        nextShowDRCButton
+        nextShowDRCButton,
+        newLastCollector: lastCollector // No change to last collector for stack
     };
 };
 
@@ -163,7 +166,8 @@ export const confirmAddToStack = (
     team1Points,
     team2Points,
     team1SeepCount,
-    team2SeepCount
+    team2SeepCount,
+    lastCollector
 ) => {
     if (!selectedStackToAddTo || !selectedHandCard) {
         alert("Please select one card from your hand and a stack to add to.");
@@ -316,7 +320,8 @@ export const confirmAddToStack = (
             team2Points,
             team1SeepCount,
             team2SeepCount,
-            showDRCButton: nextShowDRCButton
+            showDRCButton: nextShowDRCButton,
+            lastCollector // Pass through last collector (unchanged for stack action)
         });
     }
 
@@ -324,7 +329,8 @@ export const confirmAddToStack = (
         newPlayers,
         nextPlayerTurn,
         nextMoveCount,
-        nextShowDRCButton
+        nextShowDRCButton,
+        newLastCollector: lastCollector // No change to last collector for stack
     };
 };
 
@@ -448,7 +454,8 @@ export const performPickup = (
             team2Points: newTeam2Points,
             team1SeepCount: newTeam1SeepCount,
             team2SeepCount: newTeam2SeepCount,
-            showDRCButton: nextShowDRCButton
+            showDRCButton: nextShowDRCButton,
+            lastCollector: currentTurn // Set current player as last collector
         });
     }
 
@@ -476,6 +483,7 @@ export const handleThrowAway = (
     team2Points,
     team1SeepCount,
     team2SeepCount,
+    lastCollector,
     onGameAction
 ) => {
     if (!selectedHandCard) {
@@ -514,7 +522,8 @@ export const handleThrowAway = (
             team2Points,
             team1SeepCount,
             team2SeepCount,
-            showDRCButton: nextShowDRCButton
+            showDRCButton: nextShowDRCButton,
+            lastCollector // Pass through last collector (unchanged for throw action)
         });
     }
 
@@ -522,6 +531,31 @@ export const handleThrowAway = (
         newPlayers,
         nextPlayerTurn,
         nextMoveCount,
-        nextShowDRCButton
+        nextShowDRCButton,
+        newLastCollector: lastCollector // No change to last collector for throw
+    };
+};
+
+// NEW FUNCTION: Handle end of round - assign remaining cards to last collector
+export const handleEndOfRound = (players, lastCollector, collectedCards) => {
+    if (!lastCollector || players.board.length === 0) {
+        return null;
+    }
+    
+    console.log(`End of round: Assigning ${players.board.length} remaining cards to ${lastCollector}`);
+    
+    const newCollectedCards = {
+        ...collectedCards,
+        [lastCollector]: [...collectedCards[lastCollector], ...players.board]
+    };
+    
+    const newPlayers = {
+        ...players,
+        board: []
+    };
+    
+    return {
+        newCollectedCards,
+        newPlayers
     };
 };

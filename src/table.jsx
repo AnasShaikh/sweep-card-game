@@ -13,7 +13,8 @@ import {
     confirmAddToStack,
     handlePickup,
     performPickup,
-    handleThrowAway
+    handleThrowAway,
+    handleEndOfRound
 } from './tableActions';
 
 export default function Table({ gameId, user, position, playerNames, socket, onGameAction, initialGameState }) {
@@ -34,6 +35,7 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
     const [team2SeepCount, setTeam2SeepCount] = useState(0);
     const [team1Points, setTeam1Points] = useState(0);
     const [team2Points, setTeam2Points] = useState(0);
+    const [lastCollector, setLastCollector] = useState(null); // Track who picked up cards last
     
     const gameStateRef = useRef();
     
@@ -54,6 +56,7 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
             setTeam2SeepCount(initialGameState.team2SeepCount || 0);
             setTeam1Points(initialGameState.team1Points || 0);
             setTeam2Points(initialGameState.team2Points || 0);
+            setLastCollector(initialGameState.lastCollector || null);
         }
     }, [initialGameState]);
     
@@ -74,6 +77,7 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
                     setSelectedTableCards([]);
                     setSelectedStackToAddTo(null);
                     setDealVisible(false);
+                    setLastCollector(null); // Reset last collector for new round
                     break;
                     
                 case 'dealRemainingCards':
@@ -89,6 +93,21 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
                     break;
                     
                 case 'pickup':
+                    setPlayers(data.players);
+                    setCurrentTurn(data.currentTurn);
+                    setMoveCount(data.moveCount);
+                    setCollectedCards(data.collectedCards);
+                    setTeam1Points(data.team1Points);
+                    setTeam2Points(data.team2Points);
+                    setTeam1SeepCount(data.team1SeepCount);
+                    setTeam2SeepCount(data.team2SeepCount);
+                    setShowDRCButton(data.showDRCButton);
+                    setLastCollector(data.lastCollector); // Update last collector
+                    setSelectedHandCard(null);
+                    setSelectedTableCards([]);
+                    setSelectedStackToAddTo(null);
+                    break;
+                    
                 case 'throwAway':
                 case 'stack':
                     setPlayers(data.players);
@@ -100,6 +119,9 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
                     setTeam1SeepCount(data.team1SeepCount);
                     setTeam2SeepCount(data.team2SeepCount);
                     setShowDRCButton(data.showDRCButton);
+                    if (data.lastCollector !== undefined) {
+                        setLastCollector(data.lastCollector);
+                    }
                     setSelectedHandCard(null);
                     setSelectedTableCards([]);
                     setSelectedStackToAddTo(null);
@@ -114,6 +136,26 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
             socket.off('gameAction');
         };
     }, [socket]);
+    
+    // Check for end of round and assign remaining cards
+    const checkEndOfRound = (newPlayers, newCollectedCards, newLastCollector) => {
+        // Check if all players' hands are empty
+        const allHandsEmpty = ['plyr1', 'plyr2', 'plyr3', 'plyr4'].every(
+            player => newPlayers[player].length === 0
+        );
+        
+        if (allHandsEmpty && newPlayers.board.length > 0 && newLastCollector) {
+            const endResult = handleEndOfRound(newPlayers, newLastCollector, newCollectedCards);
+            if (endResult) {
+                return {
+                    players: endResult.newPlayers,
+                    collectedCards: endResult.newCollectedCards
+                };
+            }
+        }
+        
+        return null;
+    };
     
     // Update game state - FIXED to prevent infinite loop
     useEffect(() => {
@@ -133,7 +175,8 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
             team1SeepCount,
             team2SeepCount,
             team1Points,
-            team2Points
+            team2Points,
+            lastCollector
         };
         
         // Only update if game state actually changed
@@ -163,6 +206,7 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
         setSelectedTableCards([]);
         setSelectedStackToAddTo(null);
         setDealVisible(false);
+        setLastCollector(null); // Reset last collector for new round
         
         if (onGameAction) {
             onGameAction('dealCards', {
@@ -244,6 +288,7 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
             team2Points,
             team1SeepCount,
             team2SeepCount,
+            lastCollector,
             handleConfirmAddToStack
         );
 
@@ -254,6 +299,16 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
             setMoveCount(result.nextMoveCount);
             setCurrentTurn(result.nextPlayerTurn);
             setShowDRCButton(result.nextShowDRCButton);
+            if (result.newLastCollector !== undefined) {
+                setLastCollector(result.newLastCollector);
+            }
+            
+            // Check for end of round
+            const endResult = checkEndOfRound(result.newPlayers, collectedCards, lastCollector);
+            if (endResult) {
+                setPlayers(endResult.players);
+                setCollectedCards(endResult.collectedCards);
+            }
         }
     };
 
@@ -270,7 +325,8 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
             team1Points,
             team2Points,
             team1SeepCount,
-            team2SeepCount
+            team2SeepCount,
+            lastCollector
         );
 
         if (result) {
@@ -281,6 +337,16 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
             setMoveCount(result.nextMoveCount);
             setCurrentTurn(result.nextPlayerTurn);
             setShowDRCButton(result.nextShowDRCButton);
+            if (result.newLastCollector !== undefined) {
+                setLastCollector(result.newLastCollector);
+            }
+            
+            // Check for end of round
+            const endResult = checkEndOfRound(result.newPlayers, collectedCards, lastCollector);
+            if (endResult) {
+                setPlayers(endResult.players);
+                setCollectedCards(endResult.collectedCards);
+            }
         }
     };
 
@@ -311,6 +377,14 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
             setTeam1SeepCount(result.newTeam1SeepCount);
             setTeam2SeepCount(result.newTeam2SeepCount);
             setShowDRCButton(result.nextShowDRCButton);
+            setLastCollector(currentTurn); // Set current player as last collector
+            
+            // Check for end of round
+            const endResult = checkEndOfRound(result.newPlayers, result.newCollectedCards, currentTurn);
+            if (endResult) {
+                setPlayers(endResult.players);
+                setCollectedCards(endResult.collectedCards);
+            }
         }
     };
 
@@ -337,6 +411,7 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
             team2Points,
             team1SeepCount,
             team2SeepCount,
+            lastCollector,
             onGameAction
         );
 
@@ -346,6 +421,16 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
             setMoveCount(result.nextMoveCount);
             setCurrentTurn(result.nextPlayerTurn);
             setShowDRCButton(result.nextShowDRCButton);
+            if (result.newLastCollector !== undefined) {
+                setLastCollector(result.newLastCollector);
+            }
+            
+            // Check for end of round
+            const endResult = checkEndOfRound(result.newPlayers, collectedCards, lastCollector);
+            if (endResult) {
+                setPlayers(endResult.players);
+                setCollectedCards(endResult.collectedCards);
+            }
         }
     };
 
