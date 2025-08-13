@@ -10,36 +10,93 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Check token validity on app load
   useEffect(() => {
-    // Check local storage for existing user
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      try {
-        const userData = JSON.parse(storedUser);
-        console.log("Loaded user from localStorage:", userData);
-        
-        // Ensure the user object has the correct structure (id and username)
-        const validatedUser = {
-          id: userData.id || userData.userId,
-          username: userData.username
-        };
-        
-        setUser(validatedUser);
-      } catch (err) {
-        console.error("Error parsing stored user data:", err);
-        localStorage.removeItem('user');
+    const verifyStoredToken = async () => {
+      const storedUser = localStorage.getItem('user');
+      const storedToken = localStorage.getItem('auth_token');
+      
+      if (storedUser && storedToken) {
+        try {
+          const userData = JSON.parse(storedUser);
+          console.log("Found stored user:", userData);
+          
+          // Verify token with server
+          const response = await fetch('/api/verify', {
+            headers: {
+              'Authorization': `Bearer ${storedToken}`
+            }
+          });
+          
+          if (response.ok) {
+            const verifiedData = await response.json();
+            console.log("Token verified successfully:", verifiedData);
+            
+            // Update stored user data with verified data
+            const validatedUser = {
+              id: verifiedData.user.id,
+              username: verifiedData.user.username,
+              token: storedToken
+            };
+            
+            localStorage.setItem('user', JSON.stringify(validatedUser));
+            setUser(validatedUser);
+          } else {
+            // Token is invalid, clear storage
+            console.log("Token verification failed");
+            localStorage.removeItem('user');
+            localStorage.removeItem('auth_token');
+          }
+        } catch (err) {
+          console.error("Error verifying stored token:", err);
+          localStorage.removeItem('user');
+          localStorage.removeItem('auth_token');
+        }
       }
-    }
-    setLoading(false);
+      setLoading(false);
+    };
+
+    verifyStoredToken();
   }, []);
 
   const handleLogin = (userData) => {
+    console.log("User logged in:", userData);
     setUser(userData);
   };
 
   const handleLogout = () => {
     localStorage.removeItem('user');
+    localStorage.removeItem('auth_token');
     setUser(null);
+  };
+
+  // Create authenticated fetch function
+  const authenticatedFetch = async (url, options = {}) => {
+    const token = localStorage.getItem('auth_token');
+    
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      ...options.headers
+    };
+
+    const response = await fetch(url, {
+      ...options,
+      headers
+    });
+
+    // If we get a 401 or 403, the token might be expired
+    if (response.status === 401 || response.status === 403) {
+      console.log("Authentication failed, logging out");
+      handleLogout();
+      throw new Error('Authentication failed');
+    }
+
+    return response;
   };
 
   if (loading) {
@@ -66,11 +123,11 @@ export default function App() {
           />
           <Route 
             path="/lobby" 
-            element={user ? <Lobby user={user} /> : <Navigate to="/" />} 
+            element={user ? <Lobby user={user} authenticatedFetch={authenticatedFetch} /> : <Navigate to="/" />} 
           />
           <Route 
             path="/game/:gameId" 
-            element={user ? <GameRoom user={user} /> : <Navigate to="/" />} 
+            element={user ? <GameRoom user={user} authenticatedFetch={authenticatedFetch} /> : <Navigate to="/" />} 
           />
           <Route 
             path="/play" 

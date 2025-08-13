@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import Table from './table';
 
-const GameRoom = ({ user, authenticatedFetch }) => {
+const GameRoom = ({ user }) => {
   const { gameId } = useParams();
   const [game, setGame] = useState(null);
   const [socket, setSocket] = useState(null);
@@ -17,13 +17,8 @@ const GameRoom = ({ user, authenticatedFetch }) => {
     newSocket.on('connect', () => {
       console.log('Socket connected:', newSocket.id);
       
-      // Authenticate socket with JWT token
-      const token = localStorage.getItem('auth_token');
-      newSocket.emit('authenticate', { 
-        token: token,
-        userId: user.id, 
-        username: user.username 
-      });
+      // Authenticate socket first
+      newSocket.emit('authenticate', { userId: user.id, username: user.username });
       
       // Join the game room after authentication
       newSocket.emit('joinRoom', { gameId, userId: user.id });
@@ -34,6 +29,7 @@ const GameRoom = ({ user, authenticatedFetch }) => {
     // Define event handlers inside useEffect to avoid stale closures
     function handleGameUpdate(updatedGame) {
       console.log(`${user.username} received game update:`, updatedGame);
+      // Use functional update to avoid stale closure
       setGame(prevGame => {
         console.log(`${user.username} updating from:`, prevGame, 'to:', updatedGame);
         return updatedGame;
@@ -42,6 +38,7 @@ const GameRoom = ({ user, authenticatedFetch }) => {
     
     function handleGameStarted(startedGame) {
       console.log(`${user.username} received game started:`, startedGame);
+      // Use functional update to avoid stale closure
       setGame(prevGame => {
         console.log(`${user.username} game started, updating from:`, prevGame, 'to:', startedGame);
         return startedGame;
@@ -51,13 +48,6 @@ const GameRoom = ({ user, authenticatedFetch }) => {
     function handleError(errorMsg) {
       console.error('Socket error:', errorMsg);
       setError(errorMsg);
-      
-      // If error is related to authentication, redirect to login
-      if (errorMsg.includes('authentication') || errorMsg.includes('token')) {
-        localStorage.removeItem('user');
-        localStorage.removeItem('auth_token');
-        navigate('/');
-      }
     }
     
     // Register event listeners
@@ -75,37 +65,22 @@ const GameRoom = ({ user, authenticatedFetch }) => {
       newSocket.off('error', handleError);
       newSocket.disconnect();
     };
-  }, [gameId, user.id, user.username, navigate]); 
+  }, [gameId, user.id, user.username]); // Only depend on values that won't change frequently
   
   const loadGame = async () => {
     try {
-      const response = await authenticatedFetch(`/api/games/${gameId}`);
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to load game');
-      }
-      
+      const response = await fetch(`/api/games/${gameId}`);
       const data = await response.json();
+      if (!response.ok) throw new Error(data.error);
       console.log('Game loaded:', data);
       setGame(data);
-      setError('');
     } catch (err) {
-      console.error('Error loading game:', err);
       setError(err.message);
-      
-      // If game not found or authentication failed, go back to lobby
-      if (err.message.includes('not found') || err.message.includes('Authentication failed')) {
-        setTimeout(() => navigate('/lobby'), 2000);
-      }
     }
   };
   
   const joinGame = () => {
-    if (!game || !socket) {
-      setError('Unable to join game. Please try refreshing the page.');
-      return;
-    }
+    if (!game || !socket) return;
     
     // Find first available position
     const availablePosition = ['plyr1', 'plyr2', 'plyr3', 'plyr4']
@@ -124,10 +99,7 @@ const GameRoom = ({ user, authenticatedFetch }) => {
   };
   
   const startGame = () => {
-    if (!socket) {
-      setError('Unable to start game. Please try refreshing the page.');
-      return;
-    }
+    if (!socket) return;
     
     socket.emit('startGame', {
       userId: user.id,
@@ -155,32 +127,19 @@ const GameRoom = ({ user, authenticatedFetch }) => {
     return getPlayerCount() === 4;
   };
   
-  // Error handling display
-  if (error && error.includes('not found')) {
-    return (
-      <div className="game-room">
-        <h2>Game Not Found</h2>
-        <p>The game you're looking for doesn't exist or has been removed.</p>
-        <button onClick={() => navigate('/lobby')} className="back-btn">
-          Back to Lobby
-        </button>
-      </div>
-    );
-  }
-  
-  if (!game && !error) {
+  if (!game) {
     return <div className="loading">Loading game...</div>;
   }
   
   // Show table if game is playing
-  if (game && game.status === 'playing') {
+  if (game.status === 'playing') {
     const userPosition = getUserPosition();
     
     if (!userPosition) {
       return (
         <div className="game-room">
           <h2>Game In Progress</h2>
-          <p>This game has already started and you're not a participant.</p>
+          <p>This game has already started.</p>
           <button onClick={() => navigate('/lobby')} className="back-btn">
             Back to Lobby
           </button>
@@ -209,66 +168,52 @@ const GameRoom = ({ user, authenticatedFetch }) => {
   }
   
   // Show waiting room
-  const playerCount = game ? getPlayerCount() : 0;
-  const userInGame = game ? isUserInGame() : false;
+  const playerCount = getPlayerCount();
+  const userInGame = isUserInGame();
   
   return (
     <div className="game-room">
       <h2>Game Room</h2>
+      <div className="game-info">
+        <p>Game ID: {gameId}</p>
+        <p>Players: {playerCount}/4</p>
+      </div>
       
-      {game && (
-        <div className="game-info">
-          <p><strong>Game ID:</strong> {gameId}</p>
-          <p><strong>Players:</strong> {playerCount}/4</p>
-          <p><strong>Status:</strong> {game.status}</p>
-        </div>
-      )}
+      {error && <div className="error-message">{error}</div>}
       
-      {error && (
-        <div className="error-message">
-          {error}
-          {error.includes('Authentication failed') && (
-            <p>Please log in again to continue.</p>
-          )}
+      <div className="players-list">
+        <h3>Players</h3>
+        <div className="player-positions">
+          {['plyr1', 'plyr2', 'plyr3', 'plyr4'].map((pos) => {
+            const playerId = game.players[pos];
+            const playerName = game.playerNames?.[pos];
+            const isMe = playerId === user.id;
+            
+            return (
+              <div key={pos} className="player-slot">
+                <strong>{pos}:</strong> {playerName || 'Empty'}
+                {isMe && ' (You)'}
+              </div>
+            );
+          })}
         </div>
-      )}
-      
-      {game && (
-        <div className="players-list">
-          <h3>Players</h3>
-          <div className="player-positions">
-            {['plyr1', 'plyr2', 'plyr3', 'plyr4'].map((pos) => {
-              const playerId = game.players[pos];
-              const playerName = game.playerNames?.[pos];
-              const isMe = playerId === user.id;
-              
-              return (
-                <div key={pos} className={`player-slot ${isMe ? 'current-user' : ''} ${playerId ? 'occupied' : 'empty'}`}>
-                  <strong>{pos}:</strong> {playerName || 'Empty'}
-                  {isMe && ' (You)'}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      </div>
       
       <div className="game-actions">
-        {game && !isUserInGame() && playerCount < 4 && (
-          <button onClick={joinGame} className="join-game-btn">
+        {!isUserInGame() && playerCount < 4 && (
+          <button onClick={joinGame}>
             Join Game
           </button>
         )}
         
-        {game && isUserInGame() && playerCount < 4 && (
+        {isUserInGame() && playerCount < 4 && (
           <div className="waiting-message">
-            <p>Waiting for more players... ({playerCount}/4)</p>
-            <small>Share this game ID with friends: <strong>{gameId}</strong></small>
+            Waiting for more players... ({playerCount}/4)
           </div>
         )}
         
-        {game && playerCount === 4 && game.status === 'waiting' && (
-          <button onClick={startGame} className="start-game-btn">
+        {playerCount === 4 && (
+          <button onClick={startGame}>
             Start Game (All players ready!)
           </button>
         )}
@@ -276,12 +221,6 @@ const GameRoom = ({ user, authenticatedFetch }) => {
         <button onClick={() => navigate('/lobby')} className="back-btn">
           Back to Lobby
         </button>
-        
-        {game && (
-          <button onClick={loadGame} className="refresh-btn">
-            Refresh Game
-          </button>
-        )}
       </div>
     </div>
   );

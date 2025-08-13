@@ -1,11 +1,11 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const Lobby = ({ user }) => {
+const Lobby = ({ user, authenticatedFetch }) => {
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [createGameLoading, setCreateGameLoading] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -14,11 +14,19 @@ const Lobby = ({ user }) => {
 
   const fetchGames = async () => {
     try {
-      const response = await fetch('/api/games');
+      setLoading(true);
+      const response = await authenticatedFetch('/api/games');
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch games');
+      }
+      
       const data = await response.json();
       setGames(data);
+      setError('');
     } catch (err) {
-      setError('Failed to load games');
+      console.error('Error fetching games:', err);
+      setError('Failed to load games. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -26,27 +34,37 @@ const Lobby = ({ user }) => {
 
   const createGame = async () => {
     try {
-      const response = await fetch('/api/games', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        }
+      setCreateGameLoading(true);
+      setError('');
+      
+      const response = await authenticatedFetch('/api/games', {
+        method: 'POST'
       });
       
-      const data = await response.json();
-      
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to create game');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create game');
       }
+      
+      const data = await response.json();
+      console.log('Game created successfully:', data);
       
       navigate(`/game/${data.gameId}`);
     } catch (err) {
+      console.error('Error creating game:', err);
       setError(err.message);
+    } finally {
+      setCreateGameLoading(false);
     }
   };
 
   const joinGame = (gameId) => {
     navigate(`/game/${gameId}`);
+  };
+
+  const refreshGames = async () => {
+    setError('');
+    await fetchGames();
   };
 
   if (loading) {
@@ -61,31 +79,70 @@ const Lobby = ({ user }) => {
       </div>
       
       <div className="lobby-actions">
-        <button onClick={createGame} className="create-game-btn">
-          Create New Game
+        <button 
+          onClick={createGame} 
+          className="create-game-btn"
+          disabled={createGameLoading}
+        >
+          {createGameLoading ? 'Creating Game...' : 'Create New Game'}
         </button>
-        <button onClick={fetchGames} className="refresh-btn">
-          Refresh Games
+        <button 
+          onClick={refreshGames} 
+          className="refresh-btn"
+          disabled={loading}
+        >
+          {loading ? 'Refreshing...' : 'Refresh Games'}
         </button>
       </div>
       
-      {error && <div className="error-message">{error}</div>}
+      {error && (
+        <div className="error-message">
+          {error}
+          {error.includes('Authentication failed') && (
+            <p>Please log in again to continue.</p>
+          )}
+        </div>
+      )}
       
       <div className="games-list">
         <h3>Available Games</h3>
         {games.length === 0 ? (
-          <p>No games available. Create one to start playing!</p>
+          <div className="no-games">
+            <p>No games available. Create one to start playing!</p>
+          </div>
         ) : (
-          games.map((game) => (
-            <div key={game.id} className="game-item">
-              <span>Created by: {game.creator}</span>
-              <span>Players: {game.players}/{game.maxPlayers}</span>
-              <button onClick={() => joinGame(game.id)}>
-                Join Game
-              </button>
-            </div>
-          ))
+          <div className="games-grid">
+            {games.map((game) => (
+              <div key={game.id} className="game-item">
+                <div className="game-info">
+                  <div className="game-creator">
+                    <strong>Created by:</strong> {game.creator}
+                  </div>
+                  <div className="game-players">
+                    <strong>Players:</strong> {game.players}/{game.maxPlayers}
+                  </div>
+                  <div className="game-status">
+                    <strong>Status:</strong> {game.status || 'Waiting'}
+                  </div>
+                </div>
+                <div className="game-actions">
+                  <button 
+                    onClick={() => joinGame(game.id)}
+                    className="join-game-btn"
+                    disabled={game.players >= game.maxPlayers}
+                  >
+                    {game.players >= game.maxPlayers ? 'Game Full' : 'Join Game'}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
+      </div>
+      
+      <div className="lobby-stats">
+        <p>Total available games: {games.length}</p>
+        <p>Last updated: {new Date().toLocaleTimeString()}</p>
       </div>
     </div>
   );
