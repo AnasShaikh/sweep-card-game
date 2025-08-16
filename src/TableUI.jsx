@@ -80,6 +80,7 @@ export default function TableUI({
     }, []);
     
     const renderBoardCards = () => {
+        console.log('Board cards:', players.board);
         return players.board.map((card, cardIndex) => {
             if (card.startsWith('Stack of')) {
                 const stackValue = getStackValue(card);
@@ -95,6 +96,7 @@ export default function TableUI({
                         key={cardIndex} 
                         className={`stackCard ${isSelectedForAddTo ? 'selected-for-add' : ''} ${isSelectedAsTableCard ? 'selected' : ''} ${canAdd ? 'can-add' : 'cannot-add'}`}
                         onClick={() => {
+                            console.log('STACK CLICKED:', card, 'isMyTurn:', isMyTurn);
                             if (!isMyTurn) return;
                             
                             // If already selected for adding to, toggle off
@@ -109,18 +111,15 @@ export default function TableUI({
                                 return;
                             }
                             
-                            // Determine selection mode based on current selections
+                            // Determine selection mode - prioritize selecting for adding over pickup
                             if (selectedStackToAddTo) {
                                 // Already have a stack selected for adding to, so select this as table card
-                                onTableCardSelection(card);
-                            } else if (selectedTableCards.length > 0 || selectedHandCard) {
-                                // Have other selections, so this is likely for pickup - select as table card
+                                console.log('PATH: Adding to pickup (already have stack)');
                                 onTableCardSelection(card);
                             } else {
-                                // No other selections, could be either pickup or add-to
-                                // For now, default to table card selection (pickup mode)
-                                // User can use "Add to Stack" button if they want add-to mode
-                                onTableCardSelection(card);
+                                // Always select stack for adding first (shows "Add to Stack" button)
+                                console.log('PATH: Selecting stack for adding');
+                                onExistingStackSelection(card);
                             }
                         }}
                     >
@@ -135,30 +134,6 @@ export default function TableUI({
                         <div className="stackLabel">
                             Stack of {stackValue} (by {getCreatorDisplayName(card, position, playerNames)})
                             {isLooseStack(card) ? ' - Loose' : ' - Tight'}
-                            {isMyTurn && (
-                                <div className="stack-actions">
-                                    <button 
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            onTableCardSelection(card);
-                                        }}
-                                        className="stack-action-btn"
-                                    >
-                                        {isMobile ? 'Pickup' : 'Select for Pickup'}
-                                    </button>
-                                    {canAdd && (
-                                        <button 
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                onExistingStackSelection(card);
-                                            }}
-                                            className="stack-action-btn"
-                                        >
-                                            {isMobile ? (isLooseStack(card) ? 'Modify' : 'Add') : (isLooseStack(card) ? 'Modify Stack' : 'Add to Stack')}
-                                        </button>
-                                    )}
-                                </div>
-                            )}
                         </div>
                     </div>
                 );
@@ -369,21 +344,18 @@ export default function TableUI({
                         )}
                         
                         <div className="action-buttons">
-                            {!selectedStackToAddTo && (
-                                <>
-                                    <button onClick={onPickup}>
-                                        {isMobile ? 'Pickup' : 'Confirm Pickup'}
-                                    </button>
-                                    <button onClick={onConfirmStack}>
-                                        {isMobile ? 'New Stack' : 'Create New Stack'}
-                                    </button>
-                                </>
-                            )}
+                            <button onClick={onPickup}>
+                                {isMobile ? 'Pickup' : 'Confirm Pickup'}
+                            </button>
+                            <button onClick={onConfirmStack}>
+                                {isMobile ? 'New Stack' : 'Create New Stack'}
+                            </button>
                             {selectedStackToAddTo && (
                                 <button onClick={onConfirmAddToStack}>
                                     {isMobile ? 'Add to Stack' : 'Add to Stack'}
                                 </button>
                             )}
+                            {console.log('selectedStackToAddTo:', selectedStackToAddTo)}
                             <button onClick={onThrowAway}>
                                 {isMobile ? 'Throw' : 'Throw Away'}
                             </button>

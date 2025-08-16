@@ -204,6 +204,8 @@
   backdrop-filter: blur(3px);
   transition: all 0.2s ease;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  min-width: 200px;
+  overflow: visible;
 }
 
 .stackCard:hover {
@@ -214,6 +216,7 @@
 .stackedCard {
   position: relative;
   display: inline-block;
+  vertical-align: top;
 }
 
 .stackCard .stackedCard:not(:first-child) {
@@ -222,6 +225,11 @@
 
 .stackCard .stackedCard:nth-child(n+4):not(:first-child) {
   margin-left: -24px;
+}
+
+/* Stack cards container to ensure horizontal layout */
+.stackCard .stackedCard:first-child {
+  margin-left: 0;
 }
 
 .stackCard.selected {
@@ -531,9 +539,15 @@
   }
   
   /* Stack cards overlap on mobile */
+  .stackCard {
+    min-width: 150px;
+    padding: 4px;
+  }
+  
   .stackedCard {
     position: relative;
     display: inline-block;
+    vertical-align: top;
   }
   
   .stackCard .stackedCard:not(:first-child) {
