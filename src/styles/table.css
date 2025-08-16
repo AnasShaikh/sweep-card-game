@@ -14,7 +14,7 @@
     inset 0 1px 3px rgba(255, 255, 255, 0.8);
   display: grid;
   grid-template-columns: 280px 1fr 280px;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto 1fr 1fr auto;
   gap: 15px;
   position: relative;
   margin: 0 auto;
@@ -43,7 +43,7 @@
 /* Board Area */
 #board {
   grid-column: 2;
-  grid-row: 2;
+  grid-row: 2 / 4;
   background: linear-gradient(135deg, #a8d5ba 0%, #95c8a8 100%);
   border: 2px solid #7fb69a;
   border-radius: 16px;
@@ -68,7 +68,7 @@
   pointer-events: none;
 }
 
-/* Player Positioning */
+/* Player Positioning - 4 players around the board */
 #plyr1 {
   grid-column: 1;
   grid-row: 2;
@@ -81,12 +81,12 @@
 
 #plyr3 {
   grid-column: 1;
-  grid-row: 2;
+  grid-row: 3;
 }
 
 #plyr4 {
   grid-column: 3;
-  grid-row: 2;
+  grid-row: 3;
 }
 
 /* Player Areas */
@@ -262,6 +262,7 @@
 /* Controls */
 .controls {
   grid-column: 1 / span 3;
+  grid-row: 4;
   display: flex;
   justify-content: center;
   align-items: center;

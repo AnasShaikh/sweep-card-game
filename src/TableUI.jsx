@@ -267,6 +267,9 @@ export default function TableUI({
 
     // Desktop layout (back to original structure + improvements)
     const renderDesktopLayout = () => {
+        // Always put current player in plyr1 position, others in remaining positions
+        const otherPlayers = ['plyr1', 'plyr2', 'plyr3', 'plyr4'].filter(id => id !== position);
+        
         return (
             <div className='playTable'>
                 <div className="pointsSection">
@@ -274,7 +277,9 @@ export default function TableUI({
                     <h4>Team 2 ({playerNames.plyr2} & {playerNames.plyr4}) Points: {team2Points + calculatePoints([...collectedCards.plyr2, ...collectedCards.plyr4])}</h4>
                 </div>
                 
-                {renderPlayerArea('plyr1')}
+                <div id="plyr1">
+                    {renderPlayerArea(position)}
+                </div>
                 
                 <div className='playerArea' id='board'>
                     <h3>Board</h3>
@@ -283,9 +288,15 @@ export default function TableUI({
                     </div>
                 </div>
                 
-                {renderPlayerArea('plyr2')}
-                {renderPlayerArea('plyr3')}
-                {renderPlayerArea('plyr4')}
+                <div id="plyr2">
+                    {renderPlayerArea(otherPlayers[0])}
+                </div>
+                <div id="plyr3">
+                    {renderPlayerArea(otherPlayers[1])}
+                </div>
+                <div id="plyr4">
+                    {renderPlayerArea(otherPlayers[2])}
+                </div>
                 
                 {renderControls()}
             </div>
