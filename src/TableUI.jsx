@@ -135,7 +135,6 @@ export default function TableUI({
                         <div className="stackLabel">
                             Stack of {stackValue} (by {getCreatorDisplayName(card, position, playerNames)})
                             {isLooseStack(card) ? ' - Loose' : ' - Tight'}
-                            <div>Total: {getStackTotalPoints(card)} pts, {getStackCardCount(card)} cards</div>
                             {isMyTurn && (
                                 <div className="stack-actions">
                                     <button 

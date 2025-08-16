@@ -1,6 +1,6 @@
-/* Enhanced Game Table Styles - Mobile-Friendly & Responsive */
+/* ===== DESKTOP STYLES (DEFAULT) ===== */
 
-/* Desktop styles (fixed grid layout with mobile improvements) */
+/* Main Game Table */
 .playTable {
   width: 100%;
   max-width: 1400px;
@@ -21,92 +21,7 @@
   overflow: visible;
 }
 
-/* Enhanced points section */
-.pointsSection {
-  grid-column: 1 / span 3;
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(5px);
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  border-radius: 12px;
-  padding: 15px;
-  text-align: center;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-}
-
-/* Enhanced board area */
-#board {
-  grid-column: 2;
-  grid-row: 2;
-  background: linear-gradient(135deg, #a8d5ba 0%, #95c8a8 100%);
-  border: 2px solid #7fb69a;
-  border-radius: 16px;
-  padding: 20px;
-  box-shadow: 
-    inset 0 2px 10px rgba(0, 0, 0, 0.1),
-    0 4px 15px rgba(0, 0, 0, 0.1);
-  position: relative;
-  min-height: 300px;
-  color: #2c3e50;
-}
-
-/* Controls section */
-.controls {
-  grid-column: 1 / span 3;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 10px;
-  margin-top: 10px;
-  padding: 12px;
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(5px);
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-}
-
-/* Standard player positioning */
-#plyr1 {
-  grid-column: 1;
-  grid-row: 2;
-}
-
-#plyr2 {
-  grid-column: 3;
-  grid-row: 2;
-}
-
-#plyr3 {
-  grid-column: 1;
-  grid-row: 2;
-}
-
-#plyr4 {
-  grid-column: 3;
-  grid-row: 2;
-}
-
-/* Your player gets highlighted border */
-.playerArea.my-player {
-  border: 2px solid #28a745;
-  background: rgba(255, 255, 255, 0.95);
-}
-
-/* Enhanced hand card overlap for desktop */
-.handCard:not(:first-child) {
-  margin-left: -20px;
-}
-
-/* Stack cards overlap on desktop too */
-.stackCard .stackedCard:not(:first-child) {
-  margin-left: -20px;
-}
-
-.stackCard .stackedCard:nth-child(n+4):not(:first-child) {
-  margin-left: -24px;
-}
-
-/* Enhanced points section */
+/* Points Section */
 .pointsSection {
   grid-column: 1 / span 3;
   background: rgba(255, 255, 255, 0.8);
@@ -125,7 +40,7 @@
   font-weight: 600;
 }
 
-/* Enhanced board area */
+/* Board Area */
 #board {
   grid-column: 2;
   grid-row: 2;
@@ -153,7 +68,28 @@
   pointer-events: none;
 }
 
-/* Enhanced player areas */
+/* Player Positioning */
+#plyr1 {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+#plyr2 {
+  grid-column: 3;
+  grid-row: 2;
+}
+
+#plyr3 {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+#plyr4 {
+  grid-column: 3;
+  grid-row: 2;
+}
+
+/* Player Areas */
 .playerArea {
   background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(5px);
@@ -169,6 +105,11 @@
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
 }
 
+.playerArea.my-player {
+  border: 2px solid #28a745;
+  background: rgba(255, 255, 255, 0.95);
+}
+
 .playerArea h3 {
   margin-top: 0;
   text-align: center;
@@ -180,7 +121,7 @@
   margin-bottom: 12px;
 }
 
-/* Enhanced card areas */
+/* Card Areas */
 .cardDivBoard {
   display: flex;
   flex-wrap: wrap;
@@ -206,27 +147,7 @@
   background: rgba(248, 249, 250, 0.5);
 }
 
-/* Enhanced hand cards with subtle effects */
-.handCard {
-  cursor: pointer;
-  position: relative;
-  transition: all 0.25s ease;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
-}
-
-.handCard:hover {
-  transform: translateY(-6px) scale(1.02);
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15));
-  z-index: 10;
-}
-
-.handCard.selected {
-  transform: translateY(-8px) scale(1.05);
-  filter: drop-shadow(0 6px 12px rgba(108, 117, 125, 0.3));
-  z-index: 15;
-}
-
-/* Enhanced card images */
+/* Cards */
 .cardImage {
   width: 65px;
   height: 95px;
@@ -237,9 +158,32 @@
   transition: all 0.2s ease;
 }
 
+.handCard {
+  cursor: pointer;
+  position: relative;
+  transition: all 0.25s ease;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+.handCard:not(:first-child) {
+  margin-left: -20px;
+}
+
+.handCard:hover {
+  transform: translateY(-6px) scale(1.02);
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15));
+  z-index: 10;
+}
+
 .handCard:hover .cardImage {
   border-color: #6c757d;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.handCard.selected {
+  transform: translateY(-8px) scale(1.05);
+  filter: drop-shadow(0 6px 12px rgba(108, 117, 125, 0.3));
+  z-index: 15;
 }
 
 .selected .cardImage {
@@ -247,7 +191,7 @@
   box-shadow: 0 4px 12px rgba(108, 117, 125, 0.25);
 }
 
-/* Enhanced stack cards */
+/* Stack Cards */
 .stackCard {
   position: relative;
   display: inline-block;
@@ -267,6 +211,19 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
+.stackedCard {
+  position: relative;
+  display: inline-block;
+}
+
+.stackCard .stackedCard:not(:first-child) {
+  margin-left: -20px;
+}
+
+.stackCard .stackedCard:nth-child(n+4):not(:first-child) {
+  margin-left: -24px;
+}
+
 .stackCard.selected {
   border-color: #6c757d;
   background: rgba(108, 117, 125, 0.1);
@@ -284,7 +241,6 @@
   background: rgba(40, 167, 69, 0.1);
 }
 
-/* Enhanced stack labels */
 .stackLabel {
   font-size: 11px;
   background: rgba(52, 58, 64, 0.9);
@@ -298,39 +254,12 @@
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
 }
 
-/* Hide collected cards section globally */
+/* Hide collected cards globally */
 .collectedCards {
   display: none;
 }
 
-.collectedCards h4 {
-  margin: 0 0 6px 0;
-  font-size: 12px;
-  color: #6c757d;
-  font-weight: 600;
-}
-
-.collectedCard {
-  display: inline-block;
-  margin: 1px;
-  padding: 1px;
-  border: 1px solid #dee2e6;
-  border-radius: 3px;
-  background: #ffffff;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-  transition: transform 0.15s ease;
-}
-
-.collectedCard:hover {
-  transform: scale(1.05);
-}
-
-.collectedCard .cardImage {
-  width: 28px;
-  height: 42px;
-}
-
-/* Enhanced controls section */
+/* Controls */
 .controls {
   grid-column: 1 / span 3;
   display: flex;
@@ -346,7 +275,6 @@
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 
-/* Enhanced stack actions */
 .stack-actions {
   display: flex;
   gap: 4px;
@@ -373,7 +301,7 @@
   background: linear-gradient(145deg, #5a6268, #495057);
 }
 
-/* Animation for card dealing */
+/* Animations */
 @keyframes dealCard {
   from {
     opacity: 0;
@@ -389,7 +317,6 @@
   animation: dealCard 0.3s ease-out forwards;
 }
 
-/* Subtle pulse animation for active player */
 @keyframes pulse {
   0%, 100% {
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
@@ -404,7 +331,7 @@
   border-color: rgba(108, 117, 125, 0.3);
 }
 
-/* ===== RESPONSIVE DESIGN STARTS HERE ===== */
+/* ===== RESPONSIVE DESIGN ===== */
 
 /* Large screens and tablets (1024px and below) */
 @media (max-width: 1024px) {
@@ -426,7 +353,7 @@
   }
   
   .handCard:not(:first-child) {
-    margin-left: -18px;
+    margin-left: -16px;
   }
   
   .pointsSection h4 {
@@ -459,12 +386,7 @@
   }
   
   .handCard:not(:first-child) {
-    margin-left: -16px;
-  }
-  
-  .collectedCard .cardImage {
-    width: 24px;
-    height: 36px;
+    margin-left: -14px;
   }
   
   .pointsSection h4 {
@@ -483,7 +405,7 @@
   }
 }
 
-/* Small tablets and large phones (600px and below) - MOBILE VERTICAL LAYOUT */
+/* ===== MOBILE LAYOUT (600px and below) ===== */
 @media (max-width: 600px) {
   .playTable {
     min-width: 100%;
@@ -509,6 +431,11 @@
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
   }
   
+  .pointsSection h4 {
+    font-size: 14px;
+    margin: 4px 0;
+  }
+  
   /* Board gets priority - large and prominent */
   #board {
     order: 2;
@@ -518,24 +445,36 @@
     background: linear-gradient(135deg, #a8d5ba 0%, #95c8a8 100%);
   }
   
-  /* Current player's area (if it's their turn) */
-  .playerArea.current-player {
-    order: 3;
-    min-height: 120px;
-  }
-  
   /* Your player area */
   .playerArea.my-player {
     order: 3;
+    display: flex;
+    flex-direction: column;
     min-height: 120px;
+    padding: 8px;
   }
   
-  /* Controls before other players - more important */
+  /* Current player's area (if it's their turn) */
+  .playerArea.current-player {
+    order: 3;
+    display: flex;
+    flex-direction: column;
+    min-height: 120px;
+    padding: 8px;
+  }
+  
+  /* Controls before other players */
   .controls {
     order: 4;
     flex-wrap: wrap;
     gap: 6px;
     padding: 8px;
+  }
+  
+  .controls button {
+    padding: 10px 14px;
+    font-size: 12px;
+    min-height: 44px;
   }
   
   /* Other players stacked vertically */
@@ -547,48 +486,25 @@
     width: 100%;
   }
   
-  /* Mobile player areas - more compact */
-  .playerArea {
+  .players-mobile-grid .playerArea {
     display: flex;
     flex-direction: column;
-    min-height: 80px;
-    padding: 4px;
-  }
-  
-  /* Other players (not current player) even more compact */
-  .players-mobile-grid .playerArea {
     min-height: 60px;
     padding: 6px;
     width: 100%;
-    overflow: visible;
   }
   
-  .playerArea h3 {
-    font-size: 11px;
-    margin-bottom: 6px;
-    padding-bottom: 4px;
-  }
-  
-  /* Other players have even smaller text */
   .players-mobile-grid .playerArea h3 {
     font-size: 10px;
     margin-bottom: 3px;
     padding-bottom: 2px;
   }
   
-  /* Show card backs for other players on mobile */
   .players-mobile-grid .playerArea .cardDivPlay {
     display: flex;
     min-height: 40px;
     padding: 2px;
     margin-bottom: 2px;
-  }
-  
-  /* Current player gets larger hand cards with more overlap */
-  .playerArea.current-player .cardDivPlay,
-  .playerArea.my-player .cardDivPlay {
-    min-height: 70px;
-    padding: 8px;
   }
   
   /* Mobile card sizing */
@@ -597,70 +513,34 @@
     height: 70px;
   }
   
-  /* Professional card overlap for hand */
   .handCard:not(:first-child) {
     margin-left: -22px;
   }
   
-  /* Remove the variable overlap - keep it uniform */
-  
-  .collectedCard .cardImage {
-    width: 22px;
-    height: 32px;
-  }
-  
-  /* Mobile board cards - larger and more prominent */
+  /* Board cards slightly larger */
   .cardDivBoard {
     gap: 8px;
     padding: 15px;
     min-height: 180px;
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    align-items: flex-start;
   }
   
-  /* Board cards slightly larger than hand cards */
   .cardDivBoard .cardImage {
     width: 52px;
     height: 76px;
   }
   
-  /* Stack cards overlap heavily on mobile */
-  .stackCard {
-    position: relative;
-    margin: 2px;
-  }
-  
-  .stackCard .stackedCard {
+  /* Stack cards overlap on mobile */
+  .stackedCard {
     position: relative;
     display: inline-block;
   }
   
-  /* Professional overlap for cards within a stack */
   .stackCard .stackedCard:not(:first-child) {
     margin-left: -24px;
   }
   
-  /* Slightly more overlap for larger stacks */
   .stackCard .stackedCard:nth-child(n+4):not(:first-child) {
     margin-left: -28px;
-  }
-  
-  /* Hide collected cards section on mobile */
-  .collectedCards {
-    display: none;
-  }
-  
-  .collectedCards h4 {
-    font-size: 10px;
-    margin: 0 0 4px 0;
-  }
-  
-  /* Mobile typography */
-  .pointsSection h4 {
-    font-size: 14px;
-    margin: 4px 0;
   }
   
   .stackLabel {
@@ -668,22 +548,10 @@
     padding: 3px 6px;
   }
   
-  /* Mobile buttons */
-  .controls button {
-    padding: 10px 14px;
-    font-size: 12px;
-    min-height: 44px; /* Better touch targets */
-  }
-  
   .stack-action-btn {
-    padding: 10px 12px;
-    font-size: 11px;
-    min-height: 44px;
-  }
-  
-  /* Hide non-essential text on very small screens */
-  .waiting-message p {
-    font-size: 11px;
+    padding: 4px 10px;
+    font-size: 10px;
+    min-height: 26px;
   }
 }
 
@@ -695,7 +563,7 @@
   }
   
   .playerArea {
-    min-height: 140px;
+    min-height: 80px;
     padding: 6px;
   }
   
@@ -706,11 +574,6 @@
   
   .handCard:not(:first-child) {
     margin-left: -18px;
-  }
-  
-  .collectedCard .cardImage {
-    width: 20px;
-    height: 30px;
   }
   
   #board {
@@ -744,13 +607,8 @@
     margin-left: -16px;
   }
   
-  .collectedCard .cardImage {
-    width: 18px;
-    height: 28px;
-  }
-  
   .playerArea {
-    min-height: 120px;
+    min-height: 60px;
   }
   
   #board {
@@ -762,7 +620,7 @@
   }
 }
 
-/* Ensure proper touch scrolling on all mobile devices */
+/* Ensure proper touch scrolling on mobile */
 @media (max-width: 600px) {
   body {
     overflow-x: hidden;
@@ -774,7 +632,6 @@
     padding: 8px;
   }
   
-  /* Prevent horizontal scroll on very small content */
   * {
     max-width: 100%;
     box-sizing: border-box;
