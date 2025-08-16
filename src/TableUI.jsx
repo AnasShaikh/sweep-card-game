@@ -318,7 +318,7 @@ export default function TableUI({
                 {/* Game Actions Phase */}
                 {isMyTurn && call && (
                     <div>
-                        <h4>{isMobile ? 'Choose action:' : `${playerNames[currentTurn]}, choose your action:`}</h4>
+                        {!isMobile && <h4>{`${playerNames[currentTurn]}, choose your action:`}</h4>}
                         
                         {/* Show selection info */}
                         {selectedHandCard && (
@@ -380,12 +380,14 @@ export default function TableUI({
                         </div>
                         
                         {/* Clear selections button */}
-                        <button 
-                            onClick={onClearSelections}
-                            className="clear-btn"
-                        >
-                            {isMobile ? 'Clear' : 'Clear Selections'}
-                        </button>
+                        {!isMobile && (
+                            <button 
+                                onClick={onClearSelections}
+                                className="clear-btn"
+                            >
+                                Clear Selections
+                            </button>
+                        )}
                     </div>
                 )}
                 
