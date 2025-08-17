@@ -478,12 +478,37 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
     }, [socket]);
     
     const dealRemainingCards = useCallback(() => {
+        console.log('🂴 DEALING REMAINING CARDS - Current state:', {
+            deckLength: deck?.length || 0,
+            deck: deck,
+            playersHandSizes: {
+                plyr1: players?.plyr1?.length || 0,
+                plyr2: players?.plyr2?.length || 0,
+                plyr3: players?.plyr3?.length || 0,
+                plyr4: players?.plyr4?.length || 0
+            }
+        });
+        
         let remainingCards = [...deck];
         let newPlayers = { ...players };
+        
+        if (remainingCards.length < 32) {
+            console.log('⚠️ Not enough cards in deck to deal remaining cards. Expected 32, found:', remainingCards.length);
+            return;
+        }
+        
         newPlayers.plyr1.push(...remainingCards.splice(0, 8));
         newPlayers.plyr2.push(...remainingCards.splice(0, 8));
         newPlayers.plyr3.push(...remainingCards.splice(0, 8));
         newPlayers.plyr4.push(...remainingCards.splice(0, 8));
+        
+        console.log('🂴 After dealing - New hand sizes:', {
+            plyr1: newPlayers.plyr1.length,
+            plyr2: newPlayers.plyr2.length,
+            plyr3: newPlayers.plyr3.length,
+            plyr4: newPlayers.plyr4.length,
+            remainingDeck: remainingCards.length
+        });
         
         setPlayers(newPlayers);
         setDeck(remainingCards);
@@ -500,11 +525,19 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
     
     // Auto-deal remaining cards after move 3
     useEffect(() => {
+        console.log('🂴 AUTO-DEAL CHECK:', {
+            moveCount,
+            remainingCardsDealt,
+            initialized,
+            deckLength: deck?.length || 0,
+            shouldAutoDeal: moveCount === 4 && !remainingCardsDealt && initialized
+        });
+        
         if (moveCount === 4 && !remainingCardsDealt && initialized) {
-            console.log('Auto-dealing remaining cards after move 3...');
+            console.log('🂴 Auto-dealing remaining cards after move 3...');
             dealRemainingCards();
         }
-    }, [moveCount, remainingCardsDealt, initialized, dealRemainingCards]);
+    }, [moveCount, remainingCardsDealt, initialized, dealRemainingCards, deck]);
     
     // Check for game end when cards are played (hands/deck empty)
     useEffect(() => {
