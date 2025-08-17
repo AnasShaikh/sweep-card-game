@@ -191,6 +191,51 @@
   box-shadow: 0 4px 12px rgba(108, 117, 125, 0.25);
 }
 
+/* Enhanced highlighting for selected table cards */
+.tableCard.selected {
+  transform: translateY(-5px) scale(1.08);
+  transition: all 0.3s ease;
+  z-index: 10;
+}
+
+.tableCard.selected .cardImage {
+  border: 3px solid #28a745 !important;
+  box-shadow: 
+    0 0 0 2px rgba(40, 167, 69, 0.4),
+    0 0 15px rgba(40, 167, 69, 0.6),
+    0 8px 25px rgba(40, 167, 69, 0.3) !important;
+  background: rgba(40, 167, 69, 0.1) !important;
+  animation: selectedTableCardGlow 2s infinite;
+}
+
+@keyframes selectedTableCardGlow {
+  0%, 100% {
+    box-shadow: 
+      0 0 0 2px rgba(40, 167, 69, 0.4),
+      0 0 15px rgba(40, 167, 69, 0.6),
+      0 8px 25px rgba(40, 167, 69, 0.3);
+  }
+  50% {
+    box-shadow: 
+      0 0 0 2px rgba(40, 167, 69, 0.6),
+      0 0 20px rgba(40, 167, 69, 0.8),
+      0 8px 30px rgba(40, 167, 69, 0.5);
+  }
+}
+
+/* Enhanced hover effect for table cards */
+.tableCard:hover .cardImage {
+  transform: translateY(-2px) scale(1.02);
+  border-color: rgba(40, 167, 69, 0.6);
+  box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+  transition: all 0.2s ease;
+}
+
+.tableCard {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
 /* Stack Cards */
 .stackCard {
   position: relative;

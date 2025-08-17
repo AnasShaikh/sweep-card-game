@@ -6,7 +6,8 @@ import {
     nextPlayer,
     checkValidCalls,
     getCardValue,
-    formatCardName
+    formatCardName,
+    calculatePoints
 } from './tableLogic';
 import {
     confirmStack,
@@ -38,6 +39,60 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
     const [lastCollector, setLastCollector] = useState(null); // Track who picked up cards last
     const [initialized, setInitialized] = useState(false);
     const [botMoveNotification, setBotMoveNotification] = useState(null);
+    const [gameEnded, setGameEnded] = useState(false);
+    const [winner, setWinner] = useState(null);
+    
+    // Helper function to check if game has ended (all cards played)
+    const checkGameEnd = () => {
+        if (gameEnded) return; // Already ended
+        
+        // Check if game is complete: all hands empty AND deck empty
+        const allHandsEmpty = players && ['plyr1', 'plyr2', 'plyr3', 'plyr4'].every(
+            player => !players[player] || players[player].length === 0
+        );
+        
+        const deckEmpty = !players?.deck || players.deck.length === 0;
+        
+        if (allHandsEmpty && deckEmpty && initialized) {
+            // Calculate final scores
+            const team1Total = (team1Points || 0) + calculatePoints(collectedCards?.plyr1 || []) + calculatePoints(collectedCards?.plyr3 || []);
+            const team2Total = (team2Points || 0) + calculatePoints(collectedCards?.plyr2 || []) + calculatePoints(collectedCards?.plyr4 || []);
+            
+            const team1Name = `Team 1 (${getPlayerDisplayName('plyr1', playerNames)} & ${getPlayerDisplayName('plyr3', playerNames)})`;
+            const team2Name = `Team 2 (${getPlayerDisplayName('plyr2', playerNames)} & ${getPlayerDisplayName('plyr4', playerNames)})`;
+            
+            if (team1Total > team2Total) {
+                setWinner({ team: 'team1', name: team1Name, score: team1Total, opponentScore: team2Total });
+            } else if (team2Total > team1Total) {
+                setWinner({ team: 'team2', name: team2Name, score: team2Total, opponentScore: team1Total });
+            } else {
+                setWinner({ team: 'tie', name: 'Tie Game', score: team1Total, opponentScore: team2Total });
+            }
+            
+            setGameEnded(true);
+            console.log('🏆 Game ended! All cards played. Winner:', { team1Total, team2Total });
+            
+            // Update game status to 'finished' via socket
+            if (socket && onGameAction) {
+                onGameAction('gameFinished', {
+                    winner: team1Total > team2Total ? 'team1' : team2Total > team1Total ? 'team2' : 'tie',
+                    finalScores: { team1: team1Total, team2: team2Total },
+                    winnerName: team1Total > team2Total ? team1Name : team2Total > team1Total ? team2Name : 'Tie Game'
+                });
+            }
+        }
+    };
+    
+    // Helper function to get player display name
+    const getPlayerDisplayName = (position, playerNames) => {
+        const playerData = playerNames[position];
+        if (typeof playerData === 'object' && playerData.name) {
+            return playerData.name; // Bot name
+        } else if (typeof playerData === 'string') {
+            return playerData; // Human player name
+        }
+        return 'Player';
+    };
     
     // Helper function to show move notifications
     const showMoveNotification = (message) => {
@@ -185,8 +240,12 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
                 // Check if the action data includes specific cards picked up (for bots)
                 if (data.pickedUpCards && data.pickedUpCards.length > 0) {
                     const cardsList = data.pickedUpCards.join(', ');
-                    notificationMessage = `${playerName} picked up: ${cardsList}`;
-                    console.log('DEBUG: Using pickedUpCards from action data:', data.pickedUpCards);
+                    if (data.isSeep) {
+                        notificationMessage = `🧹 ${playerName} SEEP! Cleared board: ${cardsList} (+50 points)`;
+                    } else {
+                        notificationMessage = `${playerName} picked up: ${cardsList}`;
+                    }
+                    console.log('DEBUG: Using pickedUpCards from action data:', data.pickedUpCards, 'isSeep:', data.isSeep);
                 } else if (playerPosition) {
                     const oldCollected = collectedCards[playerPosition] || [];
                     const newCollected = data.collectedCards[playerPosition] || [];
@@ -212,14 +271,21 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
                     notificationMessage = `${playerName} made a pickup`;
                 }
             } else if (action === 'stack') {
-                const oldBoard = players.board || [];
-                const newBoard = data.players?.board || [];
-                const newStacks = newBoard.filter(card => card.startsWith('Stack of') && !oldBoard.includes(card));
-                if (newStacks.length > 0) {
-                    const stackValue = newStacks[0].match(/Stack of (\d+)/)?.[1];
-                    notificationMessage = `${playerName} created a stack of ${stackValue || '?'}`;
+                // Check if action data includes specific stack details (for bots)
+                if (data.stackValue && data.stackCards) {
+                    const cardsList = data.stackCards.join(', ');
+                    notificationMessage = `📚 ${playerName} created Stack of ${data.stackValue}: ${cardsList}`;
                 } else {
-                    notificationMessage = `${playerName} made a stack`;
+                    // Fallback for non-bot stack actions
+                    const oldBoard = players.board || [];
+                    const newBoard = data.players?.board || [];
+                    const newStacks = newBoard.filter(card => card.startsWith('Stack of') && !oldBoard.includes(card));
+                    if (newStacks.length > 0) {
+                        const stackValue = newStacks[0].match(/Stack of (\d+)/)?.[1];
+                        notificationMessage = `📚 ${playerName} created a stack of ${stackValue || '?'}`;
+                    } else {
+                        notificationMessage = `${playerName} made a stack`;
+                    }
                 }
             }
             
@@ -332,6 +398,13 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
             dealRemainingCards();
         }
     }, [moveCount, remainingCardsDealt, initialized, dealRemainingCards]);
+    
+    // Check for game end when cards are played (hands/deck empty)
+    useEffect(() => {
+        if (initialized && players && collectedCards) {
+            checkGameEnd();
+        }
+    }, [players, collectedCards, initialized, checkGameEnd, gameEnded, playerNames, team1Points, team2Points]);
     
     // Check for end of round and assign remaining cards
     const checkEndOfRound = (newPlayers, newCollectedCards, newLastCollector) => {
@@ -614,6 +687,102 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
     console.log('My position:', position);
     console.log('Is my turn:', isMyTurn);
     console.log('Initialized:', initialized);
+
+    // Game End Screen
+    if (gameEnded && winner) {
+        return (
+            <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: '50vh',
+                padding: '2rem',
+                backgroundColor: '#f8f9fa',
+                borderRadius: '1rem',
+                margin: '2rem',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
+            }}>
+                <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+                    <h1 style={{ 
+                        fontSize: '3rem', 
+                        color: winner.team === 'tie' ? '#6c757d' : (winner.team === 'team1' ? '#28a745' : '#007bff'),
+                        marginBottom: '1rem'
+                    }}>
+                        🏆 {winner.team === 'tie' ? 'Tie Game!' : 'Game Over!'}
+                    </h1>
+                    
+                    <h2 style={{ 
+                        fontSize: '2rem', 
+                        color: '#495057',
+                        marginBottom: '1rem'
+                    }}>
+                        {winner.team === 'tie' ? `Both teams scored ${winner.score} points!` : `${winner.name} Wins!`}
+                    </h2>
+                    
+                    <div style={{ 
+                        backgroundColor: 'white',
+                        padding: '1.5rem',
+                        borderRadius: '0.5rem',
+                        marginBottom: '2rem',
+                        boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
+                    }}>
+                        <h3 style={{ marginBottom: '1rem', color: '#343a40' }}>Final Scores</h3>
+                        <div style={{ display: 'flex', justifyContent: 'space-around', gap: '2rem' }}>
+                            <div>
+                                <h4 style={{ color: winner.team === 'team1' ? '#28a745' : '#6c757d' }}>
+                                    Team 1: {winner.team === 'team1' ? winner.score : winner.opponentScore} points
+                                </h4>
+                            </div>
+                            <div>
+                                <h4 style={{ color: winner.team === 'team2' ? '#007bff' : '#6c757d' }}>
+                                    Team 2: {winner.team === 'team2' ? winner.score : winner.opponentScore} points
+                                </h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+                    <button 
+                        onClick={() => window.location.href = '/lobby'}
+                        style={{
+                            padding: '1rem 2rem',
+                            fontSize: '1.2rem',
+                            backgroundColor: '#28a745',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '0.5rem',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                        }}
+                        onMouseOver={(e) => e.target.style.backgroundColor = '#218838'}
+                        onMouseOut={(e) => e.target.style.backgroundColor = '#28a745'}
+                    >
+                        🎮 Start New Game
+                    </button>
+                    
+                    <button 
+                        onClick={() => window.location.href = '/lobby'}
+                        style={{
+                            padding: '1rem 2rem',
+                            fontSize: '1.2rem',
+                            backgroundColor: '#6c757d',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '0.5rem',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                        }}
+                        onMouseOver={(e) => e.target.style.backgroundColor = '#5a6268'}
+                        onMouseOut={(e) => e.target.style.backgroundColor = '#6c757d'}
+                    >
+                        🏠 Return to Lobby
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <TableUI

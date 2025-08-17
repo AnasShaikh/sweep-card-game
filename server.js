@@ -37,7 +37,7 @@ app.use(express.static('dist'));
 // In-memory storage for games (will be migrated to database later)
 const games = {};
 
-// Helper function to check if bot can pickup any board cards
+// Enhanced helper function to check for bot pickup opportunities (including seeps)
 const canBotPickup = (botHand, boardCards) => {
   console.log('DEBUG: canBotPickup called with:');
   console.log('DEBUG: Hand cards:', botHand);
@@ -48,13 +48,13 @@ const canBotPickup = (botHand, boardCards) => {
     return null;
   }
   
-  // Using imported functions
+  let bestMove = null;
   
   for (const handCard of botHand) {
     const handValue = getCardValue(formatCardName(handCard));
     console.log('DEBUG: Checking hand card:', handCard, 'value:', handValue);
     
-    // Check if this hand card can pick up any board cards
+    // Check for pickup opportunities with this hand card
     for (const boardCard of boardCards) {
       const boardValue = getCardValue(formatCardName(boardCard));
       console.log('DEBUG: Comparing with board card:', boardCard, 'value:', boardValue);
@@ -64,7 +64,69 @@ const canBotPickup = (botHand, boardCards) => {
       }
     }
   }
-  console.log('DEBUG: No pickup opportunities found');
+  
+  if (bestMove) {
+    console.log('DEBUG: Best move found:', bestMove);
+  } else {
+    console.log('DEBUG: No pickup opportunities found');
+  }
+  
+  return bestMove;
+};
+
+// Helper function to detect stack creation opportunities (following game rules)
+const canBotCreateStack = (botHand, boardCards, call) => {
+  console.log('=== STACK DETECTION START ===');
+  console.log('DEBUG: Checking stack creation opportunities with call:', call);
+  
+  if (!boardCards || boardCards.length < 2) {
+    console.log('DEBUG: Not enough board cards for stacking');
+    return null;
+  }
+  
+  if (!call) {
+    console.log('DEBUG: No call made yet - cannot create stacks');
+    return null;
+  }
+  
+  // Try different stack values that follow game rules
+  for (const handCard of botHand) {
+    const handValue = getCardValue(formatCardName(handCard));
+    console.log('DEBUG: Checking hand card for stack:', handCard, 'value:', handValue);
+    
+    // RULE 1: Stack value must equal the call OR be a multiple of the call
+    if (handValue !== call && handValue % call !== 0) {
+      console.log('DEBUG: Skipping - stack value must equal call or be multiple of call. Value:', handValue, 'Call:', call);
+      continue;
+    }
+    
+    // RULE 2: Must have an extra card matching the call in hand (excluding the hand card being used)
+    const remainingCards = botHand.filter(card => card !== handCard);
+    const hasCallCard = remainingCards.some(card => getCardValue(formatCardName(card)) === call);
+    
+    if (!hasCallCard) {
+      console.log('DEBUG: Skipping - need extra card matching call', call, 'in hand. Remaining cards:', remainingCards);
+      continue;
+    }
+    
+    // Find board cards that match this value
+    const matchingBoardCards = boardCards.filter(boardCard => {
+      const boardValue = getCardValue(formatCardName(boardCard));
+      return boardValue === handValue;
+    });
+    
+    // Need at least 1 matching board card to make a stack worthwhile
+    if (matchingBoardCards.length >= 1) {
+      console.log('DEBUG: 📚 VALID STACK OPPORTUNITY! Hand card:', handCard, 'Stack value:', handValue, 'Call:', call, 'Matching board cards:', matchingBoardCards);
+      return {
+        handCard,
+        stackValue: handValue,
+        boardCards: matchingBoardCards
+      };
+    }
+  }
+  
+  console.log('DEBUG: No valid stack opportunities found following game rules');
   return null;
 };
 
@@ -116,10 +178,145 @@ const generateBotMove = (gameState, botPosition) => {
         boardSize: currentBoard.length,
         boardCards: currentBoard
       });
-      const pickupOpportunity = canBotPickup(botHand, currentBoard);
       
-      if (pickupOpportunity) {
-        // Bot found a pickup - execute it
+      // Check for opportunities in priority order: 1) Seeps, 2) Stacks, 3) Regular pickups
+      const pickupOpportunity = canBotPickup(botHand, currentBoard);
+      const stackOpportunity = canBotCreateStack(botHand, currentBoard, gameState.call);
+      
+      // Priority 1: Seeps (highest priority)
+      if (pickupOpportunity && pickupOpportunity.isSeep) {
+        // Execute seep
+        const { handCard, boardCards, isSeep } = pickupOpportunity;
+        const updatedHand = botHand.filter(card => card !== handCard);
+        const updatedBoard = currentBoard.filter(card => !boardCards.includes(card));
+        
+        // Add collected cards to bot's collection
+        const newCollectedCards = {
+          ...(gameState.collectedCards || { plyr1: [], plyr2: [], plyr3: [], plyr4: [] }),
+          [botPosition]: [...(gameState.collectedCards?.[botPosition] || []), handCard, ...boardCards]
+        };
+        
+        // Calculate seep points if board is cleared
+        let newTeam1Points = gameState.team1Points;
+        let newTeam2Points = gameState.team2Points;
+        let newTeam1SeepCount = gameState.team1SeepCount;
+        let newTeam2SeepCount = gameState.team2SeepCount;
+        
+        if (isSeep) {
+          console.log('DEBUG: 🧹 Bot executed SEEP! Awarding 50 points');
+          if (['plyr1', 'plyr3'].includes(botPosition)) {
+            // Team 1 gets seep
+            if (newTeam1SeepCount < 2) {
+              newTeam1Points += 50;
+              newTeam1SeepCount += 1;
+              console.log('DEBUG: Team 1 seep awarded. New points:', newTeam1Points, 'Seep count:', newTeam1SeepCount);
+            } else {
+              newTeam1Points -= 50;
+              newTeam1SeepCount -= 1;
+              console.log('DEBUG: Team 1 seep penalty (over limit). New points:', newTeam1Points);
+            }
+          } else {
+            // Team 2 gets seep  
+            if (newTeam2SeepCount < 2) {
+              newTeam2Points += 50;
+              newTeam2SeepCount += 1;
+              console.log('DEBUG: Team 2 seep awarded. New points:', newTeam2Points, 'Seep count:', newTeam2SeepCount);
+            } else {
+              newTeam2Points -= 50;
+              newTeam2SeepCount -= 1;
+              console.log('DEBUG: Team 2 seep penalty (over limit). New points:', newTeam2Points);
+            }
+          }
+        }
+        
+        const updatedPlayers = { 
+          ...gameState.players,
+          [botPosition]: updatedHand,
+          board: updatedBoard
+        };
+        
+        // Move to next player
+        const playerOrder = ['plyr2', 'plyr3', 'plyr4', 'plyr1'];
+        const currentIndex = playerOrder.indexOf(botPosition);
+        const nextPlayer = playerOrder[(currentIndex + 1) % 4];
+        
+        if (isSeep) {
+          console.log('DEBUG: 🧹 Bot SEEP! Hand card:', handCard, 'cleared board:', boardCards);
+        } else {
+          console.log('DEBUG: Bot picking up cards:', handCard, 'collected:', boardCards);
+        }
+        
+        return {
+          action: 'pickup',
+          players: updatedPlayers,
+          currentTurn: nextPlayer,
+          moveCount: gameState.moveCount + 1,
+          collectedCards: newCollectedCards,
+          // Add specific cards picked up for notification
+          pickedUpCards: [handCard, ...boardCards],
+          isSeep: isSeep,
+          // Preserve all other game state with updated points
+          deck: gameState.deck,
+          call: gameState.call,
+          boardVisible: gameState.boardVisible,
+          dealVisible: gameState.dealVisible,
+          remainingCardsDealt: gameState.remainingCardsDealt,
+          showDRCButton: gameState.showDRCButton,
+          team1SeepCount: newTeam1SeepCount,
+          team2SeepCount: newTeam2SeepCount,
+          team1Points: newTeam1Points,
+          team2Points: newTeam2Points,
+          lastCollector: gameState.lastCollector
+        };
+      } else if (stackOpportunity) {
+        // Priority 2: Stack creation
+        const { handCard, stackValue, boardCards } = stackOpportunity;
+        console.log('DEBUG: 📚 Bot creating stack with value:', stackValue);
+        
+        const updatedHand = botHand.filter(card => card !== handCard);
+        const updatedBoard = currentBoard.filter(card => !boardCards.includes(card));
+        
+        // Create the stack string
+        const stackString = `Stack of ${stackValue} (by ${botPosition}): ${handCard} + ${boardCards.join(' + ')}`;
+        updatedBoard.push(stackString);
+        
+        const updatedPlayers = { 
+          ...gameState.players,
+          [botPosition]: updatedHand,
+          board: updatedBoard
+        };
+        
+        // Move to next player
+        const playerOrder = ['plyr2', 'plyr3', 'plyr4', 'plyr1'];
+        const currentIndex = playerOrder.indexOf(botPosition);
+        const nextPlayer = playerOrder[(currentIndex + 1) % 4];
+        
+        console.log('DEBUG: 📚 Bot created stack:', stackString);
+        
+        return {
+          action: 'stack',
+          players: updatedPlayers,
+          currentTurn: nextPlayer,
+          moveCount: gameState.moveCount + 1,
+          // Add details for notification
+          stackValue,
+          stackCards: [handCard, ...boardCards],
+          // Preserve all other game state
+          deck: gameState.deck,
+          call: gameState.call,
+          boardVisible: gameState.boardVisible,
+          collectedCards: gameState.collectedCards,
+          dealVisible: gameState.dealVisible,
+          remainingCardsDealt: gameState.remainingCardsDealt,
+          showDRCButton: gameState.showDRCButton,
+          team1SeepCount: gameState.team1SeepCount,
+          team2SeepCount: gameState.team2SeepCount,
+          team1Points: gameState.team1Points,
+          team2Points: gameState.team2Points,
+          lastCollector: gameState.lastCollector
+        };
+      } else if (pickupOpportunity) {
+        // Priority 3: Regular pickup
         const { handCard, boardCards } = pickupOpportunity;
         const updatedHand = botHand.filter(card => card !== handCard);
         const updatedBoard = currentBoard.filter(card => !boardCards.includes(card));
@@ -141,7 +338,7 @@ const generateBotMove = (gameState, botPosition) => {
         const currentIndex = playerOrder.indexOf(botPosition);
         const nextPlayer = playerOrder[(currentIndex + 1) % 4];
         
-        console.log('DEBUG: Bot picking up cards:', handCard, 'collected:', boardCards);
+        console.log('DEBUG: Bot making regular pickup:', handCard, 'collected:', boardCards);
         
         return {
           action: 'pickup',
@@ -149,8 +346,8 @@ const generateBotMove = (gameState, botPosition) => {
           currentTurn: nextPlayer,
           moveCount: gameState.moveCount + 1,
           collectedCards: newCollectedCards,
-          // Add specific cards picked up for notification
           pickedUpCards: [handCard, ...boardCards],
+          isSeep: false,
           // Preserve all other game state
           deck: gameState.deck,
           call: gameState.call,
@@ -165,7 +362,7 @@ const generateBotMove = (gameState, botPosition) => {
           lastCollector: gameState.lastCollector
         };
       } else {
-        // No pickup available - just throw away a random card
+        // Priority 4: No good options - just throw away a random card
         const randomCardIndex = Math.floor(Math.random() * botHand.length);
         const cardToPlay = botHand[randomCardIndex];
         
@@ -238,8 +435,9 @@ const getGamesFromDB = async (userId = null) => {
           END as user_relation
         FROM games g
         JOIN users u ON g.creator_id = u.id
-        WHERE g.status = 'waiting' 
-           OR (g.status = 'playing' AND ((g.players->>'plyr1')::int = $1 OR (g.players->>'plyr2')::int = $1 OR (g.players->>'plyr3')::int = $1 OR (g.players->>'plyr4')::int = $1))
+        WHERE (g.status = 'waiting' 
+           OR (g.status = 'playing' AND ((g.players->>'plyr1')::int = $1 OR (g.players->>'plyr2')::int = $1 OR (g.players->>'plyr3')::int = $1 OR (g.players->>'plyr4')::int = $1)))
+           AND g.status != 'finished'
         ORDER BY g.created_at DESC
       `;
       params = [userId];
@@ -262,6 +460,11 @@ const getGamesFromDB = async (userId = null) => {
     }
     
     const result = await pool.query(query, params);
+    
+    console.log(`🎯 DEBUG: getGamesFromDB found ${result.rows.length} games for user ${userId}`);
+    result.rows.forEach(game => {
+      console.log(`🎯 DEBUG: Game ${game.id} - Status: ${game.status}, User relation: ${game.user_relation || 'N/A'}`);
+    });
     
     return result.rows.map(game => ({
       id: game.id,
@@ -861,6 +1064,26 @@ io.on('connection', (socket) => {
           moveCount: data.moveCount,
           currentTurn: data.currentTurn
         });
+      } else if (action === 'gameFinished') {
+        console.log(`🎯 DEBUG: Received gameFinished action for game ${gameId}`);
+        console.log(`🎯 DEBUG: Game data:`, data);
+        console.log(`🎯 DEBUG: Current game status:`, game.status);
+        
+        // Mark game as finished
+        game.status = 'finished';
+        
+        // Update in database
+        console.log(`🎯 DEBUG: Updating database status to 'finished'`);
+        await updateGameInDB(gameId, { 
+          status: 'finished',
+          gameState: { ...game.gameState, finished: true, winner: data.winner, finalScores: data.finalScores }
+        });
+        
+        // Update memory storage
+        games[gameId] = game;
+        
+        console.log(`🏆 Game ${gameId} finished! Winner: ${data.winnerName}, Scores:`, data.finalScores);
+        console.log(`🎯 DEBUG: Game status now set to:`, game.status);
       }
       
       // Broadcast to all players in the game
