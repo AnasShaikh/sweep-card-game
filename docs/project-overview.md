@@ -117,6 +117,18 @@ Authentication utilities for JWT-based user management.
 - `authenticateUser()` - Login user with password verification
 - `getUserById()` - Fetch user data from database
 
+### `src/botAI.js` ✨ **NEW**
+Dedicated bot artificial intelligence module for strategic gameplay.
+- `canBotPickup()` - Detects pickup opportunities including seep detection
+- `canBotCreateStack()` - Identifies stack creation opportunities with game rule validation
+- `generateBotMove()` - Main decision engine implementing priority system (seeps > stacks > pickups > throwaway)
+- `createPickupAction()` - Helper to construct pickup actions with seep scoring
+- `createStackAction()` - Helper to construct stack creation actions
+- `createThrowAwayAction()` - Helper to construct fallback throwaway actions  
+- `getBotMoveDelay()` - Configurable timing for realistic bot behavior
+- **Security:** All bot logic runs server-side to prevent cheating
+- **Priority System:** Bots prioritize seeps (50pts), then stacks, then regular pickups
+
 ### `src/db.js`
 PostgreSQL database connection and configuration.
 - Database pool connection to `seep_game` database
@@ -136,6 +148,7 @@ Express server with Socket.IO for real-time multiplayer functionality and JWT au
 - `POST /api/games` - Game creation with database storage
 - `GET /api/games` - List available games from database
 - `GET /api/games/:gameId` - Get specific game details from database
+- `POST /api/games/:gameId/fill-bots` - Fill remaining slots with AI bots
 
 **Socket.IO Events (JWT Authentication):**
 - `authenticate` - Associates socket with user via JWT token
@@ -143,10 +156,18 @@ Express server with Socket.IO for real-time multiplayer functionality and JWT au
 - `joinGame` - Adds player to specific position in game
 - `startGame` - Initiates game when 4 players ready
 - `gameAction` - Handles all game actions (deals, moves, calls)
+- `terminateGame` - Allows players to end active games
+- `gameFinished` - Marks completed games in database
+
+**Bot Integration:**
+- Imports `generateBotMove()` from `src/botAI.js` for AI decision making
+- Automatic bot move triggering with 1-3 second realistic delays  
+- Bot move execution and state synchronization
 
 **Data Storage:**
 - PostgreSQL database for persistent user and game storage
 - In-memory game state for Socket.IO compatibility during transition
+- Game status tracking ('waiting', 'playing', 'finished', 'terminated')
 
 ### `.env` ✨ **NEW**
 Environment variables for configuration.
@@ -191,6 +212,8 @@ CREATE TABLE games (
 
 **Multiplayer Support:** Real-time 4-player games with Socket.IO synchronization
 
+**AI Bot Players:** Intelligent bots with strategic decision making and rule compliance
+
 **Team Play:** Players 1&3 vs Players 2&4 with team-specific permissions
 
 **Stack System:** Complex stack creation and modification with loose/tight mechanics
@@ -202,6 +225,8 @@ CREATE TABLE games (
 **Turn Management:** Structured turn-based gameplay with call system
 
 **Card Validation:** Comprehensive validation for all game actions
+
+**Game End Detection:** Automatic winner determination and database status updates
 
 ## Authentication Flow ✨ **NEW**
 
@@ -253,11 +278,13 @@ src/table.jsx → src/tableActions.js → src/tableLogic.js
 ```
 src/initialDeck.js → src/table.jsx → src/tableActions.js → src/tableLogic.js
 PostgreSQL Database ↔ server.js ↔ src/GameRoom.jsx
+src/botAI.js → server.js (bot decision making)
 ```
 - **src/initialDeck.js** provides static deck data imported by table.jsx
 - **PostgreSQL Database** stores persistent user and game data
 - **server.js** manages database operations and JWT authentication
 - **src/GameRoom.jsx** fetches game data from database via authenticated APIs
+- **src/botAI.js** provides AI decision making imported by server.js for bot players
 
 ### Client-Server Communication ✨ **UPDATED**
 ```
@@ -325,9 +352,9 @@ table.jsx (state management layer)
     ↑
 TableUI.jsx (presentation layer)
 
-auth.js (authentication utilities)
+tableLogic.js → botAI.js (AI decision making)
     ↑
-server.js (API and socket layer)
+auth.js (authentication utilities) → server.js (API and socket layer)
     ↑
 App.jsx (application state management)
 ```
@@ -343,5 +370,8 @@ App.jsx (application state management)
 - `TableUI.jsx` **REQUIRES** event handlers from `table.jsx` to be interactive
 - `GameRoom.jsx` **NEEDS** JWT-authenticated Socket.IO connection to synchronize
 - `server.js` **DEPENDS** on `src/auth.js` for authentication utilities
+- `server.js` **IMPORTS** `src/botAI.js` for AI bot decision making
+- `src/botAI.js` **REQUIRES** `src/tableLogic.js` for game utilities and card values
 - All protected routes **REQUIRE** valid JWT tokens for access
 - All components **DEPEND** on `App.css` for proper visual rendering
+- Bot functionality **NEEDS** server-side execution to prevent cheating
