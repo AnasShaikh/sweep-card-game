@@ -296,11 +296,8 @@ export default function TableUI({
         );
     };
 
-    // Desktop layout (back to original structure + improvements)
+    // Desktop layout with proper seating arrangement
     const renderDesktopLayout = () => {
-        // Always put current player in plyr1 position, others in remaining positions
-        const otherPlayers = ['plyr1', 'plyr2', 'plyr3', 'plyr4'].filter(id => id !== position);
-        
         return (
             <div className='playTable'>
                 {/* Move Notification */}
@@ -331,10 +328,17 @@ export default function TableUI({
                     <h4>Team 2 ({getPlayerDisplayName('plyr2', playerNames)} & {getPlayerDisplayName('plyr4', playerNames)}) Points: {(team2Points || 0) + calculatePoints(collectedCards?.plyr2 || []) + calculatePoints(collectedCards?.plyr4 || [])}</h4>
                 </div>
                 
+                {/* Player 1 - Left side, top */}
                 <div id="plyr1">
-                    {renderPlayerArea(position)}
+                    {renderPlayerArea('plyr1')}
                 </div>
                 
+                {/* Player 4 - Right side, top */}
+                <div id="plyr4">
+                    {renderPlayerArea('plyr4')}
+                </div>
+                
+                {/* Board - Center */}
                 <div className='playerArea' id='board'>
                     <h3>Board</h3>
                     <div className="cardDivBoard">
@@ -342,14 +346,14 @@ export default function TableUI({
                     </div>
                 </div>
                 
+                {/* Player 2 - Left side, bottom */}
                 <div id="plyr2">
-                    {renderPlayerArea(otherPlayers[0])}
+                    {renderPlayerArea('plyr2')}
                 </div>
+                
+                {/* Player 3 - Right side, bottom */}
                 <div id="plyr3">
-                    {renderPlayerArea(otherPlayers[1])}
-                </div>
-                <div id="plyr4">
-                    {renderPlayerArea(otherPlayers[2])}
+                    {renderPlayerArea('plyr3')}
                 </div>
                 
                 {renderControls()}
@@ -380,7 +384,7 @@ export default function TableUI({
                 )}
                 
                 {/* Game Actions Phase */}
-                {isMyTurn && call && (
+                {isMyTurn && (call || moveCount > 1) && (
                     <div>
                         {!isMobile && <h4>{`${getPlayerDisplayName(currentTurn, playerNames)}, choose your action:`}</h4>}
                         

@@ -128,7 +128,14 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
             setCurrentTurn(initialGameState.currentTurn || 'plyr2');
             setMoveCount(initialGameState.moveCount || 0);
             setCall(initialGameState.call || null);
-            setBoardVisible(initialGameState.boardVisible || false);
+            // Board should be visible if:
+            // 1. Explicitly set to visible, OR
+            // 2. A call has been made, OR  
+            // 3. We're past the initial move (move count > 1)
+            const shouldShowBoard = initialGameState.boardVisible || 
+                                   initialGameState.call || 
+                                   (initialGameState.moveCount && initialGameState.moveCount > 1);
+            setBoardVisible(shouldShowBoard);
             setCollectedCards(initialGameState.collectedCards || { plyr1: [], plyr2: [], plyr3: [], plyr4: [] });
             setDealVisible(initialGameState.dealVisible !== false);
             setRemainingCardsDealt(initialGameState.remainingCardsDealt || false);
@@ -333,6 +340,7 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
                     setTeam2SeepCount(data.team2SeepCount);
                     setShowDRCButton(data.showDRCButton);
                     setLastCollector(data.lastCollector); // Update last collector
+                    setBoardVisible(true); // Ensure board is visible during gameplay
                     setSelectedHandCard(null);
                     setSelectedTableCards([]);
                     setSelectedStackToAddTo(null);
@@ -349,6 +357,7 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
                     setTeam1SeepCount(data.team1SeepCount);
                     setTeam2SeepCount(data.team2SeepCount);
                     setShowDRCButton(data.showDRCButton);
+                    setBoardVisible(true); // Ensure board is visible during gameplay
                     if (data.lastCollector !== undefined) {
                         setLastCollector(data.lastCollector);
                     }
@@ -684,6 +693,8 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
     console.log('Players state:', players);
     console.log('Current turn:', currentTurn);
     console.log('Board visible:', boardVisible);
+    console.log('Call:', call);
+    console.log('Move count:', moveCount);
     console.log('My position:', position);
     console.log('Is my turn:', isMyTurn);
     console.log('Initialized:', initialized);

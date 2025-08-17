@@ -1,5 +1,5 @@
 // src/botAI.js - Bot AI logic for Seep card game
-import { getCardValue, formatCardName } from './tableLogic.js';
+import { getCardValue, formatCardName, findAllPickupCombinations } from './tableLogic.js';
 
 /**
  * Enhanced helper function to check for bot pickup opportunities (including seeps)
@@ -30,12 +30,17 @@ export const canBotPickup = (botHand, boardCards) => {
       if (handValue === boardValue) {
         console.log('DEBUG: PICKUP FOUND! Hand card:', handCard, 'can pick up board card:', boardCard);
         
+        // CRITICAL FIX: Use auto-expansion like human players
+        const allPickupCards = findAllPickupCombinations(handValue, boardCards, [boardCard]);
+        console.log('DEBUG: Auto-expanded pickup cards:', allPickupCards);
+        
         // Check if this would be a seep (clear the entire board)
-        const wouldBeSeep = boardCards.length === 1;
+        const wouldBeSeep = allPickupCards.length === boardCards.length;
+        console.log('DEBUG: Seep check - picking up', allPickupCards.length, 'out of', boardCards.length, 'cards. Is seep:', wouldBeSeep);
         
         return { 
           handCard, 
-          boardCards: [boardCard],
+          boardCards: allPickupCards,
           isSeep: wouldBeSeep
         };
       }

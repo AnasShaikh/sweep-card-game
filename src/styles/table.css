@@ -69,24 +69,26 @@
 }
 
 /* Player Positioning - 4 players around the board */
+/* Team 1: plyr1 & plyr3 sit diagonal (left-top & right-bottom) */
+/* Team 2: plyr2 & plyr4 sit diagonal (left-bottom & right-top) */
 #plyr1 {
   grid-column: 1;
   grid-row: 2;
 }
 
 #plyr2 {
-  grid-column: 3;
-  grid-row: 2;
+  grid-column: 1;
+  grid-row: 3;
 }
 
 #plyr3 {
-  grid-column: 1;
+  grid-column: 3;
   grid-row: 3;
 }
 
 #plyr4 {
   grid-column: 3;
-  grid-row: 3;
+  grid-row: 2;
 }
 
 /* Player Areas */
@@ -750,9 +752,9 @@
   }
   
   #plyr1 { grid-column: 1; grid-row: 2; }
-  #plyr2 { grid-column: 3; grid-row: 2; }
-  #plyr3 { grid-column: 1; grid-row: 3; }
-  #plyr4 { grid-column: 3; grid-row: 3; }
+  #plyr2 { grid-column: 1; grid-row: 3; }
+  #plyr3 { grid-column: 3; grid-row: 3; }
+  #plyr4 { grid-column: 3; grid-row: 2; }
   
   #board {
     grid-column: 2;

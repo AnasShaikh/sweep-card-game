@@ -117,6 +117,8 @@ Authentication utilities for JWT-based user management.
 - `authenticateUser()` - Login user with password verification
 - `getUserById()` - Fetch user data from database
 
+
+
 ### `src/botAI.js` ✨ **NEW**
 Dedicated bot artificial intelligence module for strategic gameplay.
 - `canBotPickup()` - Detects pickup opportunities including seep detection
