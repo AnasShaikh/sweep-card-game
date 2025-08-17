@@ -1,5 +1,8 @@
 /* Base Styles - Global settings, variables, and common elements */
 
+/* Import Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@400;500;600&display=swap');
+
 /* Enhanced Game Table Styles - Refined & Responsive */
 
 /* Main game container with elegant, sober background */
@@ -11,7 +14,7 @@ main {
   align-items: center;
   padding: 15px;
   background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 50%, #dee2e6 100%);
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   color: #495057;
   overflow-x: auto;
   overflow-y: auto;
@@ -39,12 +42,10 @@ body {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 
-.header h1 {
+.header .logo {
+  height: 60px;
+  width: auto;
   margin: 0;
-  color: #2c3e50;
-  font-size: 2.2rem;
-  font-weight: 600;
-  text-shadow: none;
 }
 
 .user-info {
@@ -121,8 +122,9 @@ button:active {
     padding: 10px 15px;
   }
   
-  .header h1 {
-    font-size: 1.6rem;
+  .header .logo {
+    height: 55px;
+    width: auto;
   }
   
   button {

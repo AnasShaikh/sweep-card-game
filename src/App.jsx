@@ -107,7 +107,7 @@ export default function App() {
     <BrowserRouter>
       <main>
         <div className="header">
-          <h1>Seep Saap Soop</h1>
+          <img src="/logo.svg" alt="Seep Saap Soop" className="logo" />
           {user && (
             <div className="user-info">
               <span>Welcome, {user.username}!</span>

@@ -1,0 +1,25 @@
+<svg width="120" height="60" viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="textGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#dc3545"/>
+      <stop offset="100%" style="stop-color:#b02a37"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Three overlapping cards -->
+  <rect x="8" y="15" width="12" height="16" rx="2" fill="#dc3545" stroke="#fff" stroke-width="1"/>
+  <rect x="12" y="18" width="12" height="16" rx="2" fill="#c82333" stroke="#fff" stroke-width="1"/>
+  <rect x="16" y="21" width="12" height="16" rx="2" fill="#a71e2a" stroke="#fff" stroke-width="1"/>
+  
+  <!-- Card symbols -->
+  <circle cx="14" cy="21" r="1.2" fill="#fff"/>
+  <circle cx="18" cy="24" r="1.2" fill="#fff"/>
+  <circle cx="22" cy="27" r="1.2" fill="#fff"/>
+  
+  <!-- Text - each word on its own line -->
+  <text x="40" font-family="Playfair Display, Georgia, serif" font-size="17" font-weight="bold" fill="url(#textGrad)" letter-spacing="0.3px">
+    <tspan x="40" y="20">Seep</tspan>
+    <tspan x="40" y="35">Saap</tspan>
+    <tspan x="40" y="50">Soop</tspan>
+  </text>
+</svg>
