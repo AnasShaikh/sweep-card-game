@@ -14,6 +14,7 @@ import {
   getUserById,
   verifyToken 
 } from './src/auth.js';
+import { getCardValue, formatCardName } from './src/tableLogic.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -36,9 +37,41 @@ app.use(express.static('dist'));
 // In-memory storage for games (will be migrated to database later)
 const games = {};
 
+// Helper function to check if bot can pickup any board cards
+const canBotPickup = (botHand, boardCards) => {
+  console.log('DEBUG: canBotPickup called with:');
+  console.log('DEBUG: Hand cards:', botHand);
+  console.log('DEBUG: Board cards:', boardCards);
+  
+  if (!boardCards || boardCards.length === 0) {
+    console.log('DEBUG: No board cards available for pickup');
+    return null;
+  }
+  
+  // Using imported functions
+  
+  for (const handCard of botHand) {
+    const handValue = getCardValue(formatCardName(handCard));
+    console.log('DEBUG: Checking hand card:', handCard, 'value:', handValue);
+    
+    // Check if this hand card can pick up any board cards
+    for (const boardCard of boardCards) {
+      const boardValue = getCardValue(formatCardName(boardCard));
+      console.log('DEBUG: Comparing with board card:', boardCard, 'value:', boardValue);
+      if (handValue === boardValue) {
+        console.log('DEBUG: PICKUP FOUND! Hand card:', handCard, 'can pick up board card:', boardCard);
+        return { handCard, boardCards: [boardCard] };
+      }
+    }
+  }
+  console.log('DEBUG: No pickup opportunities found');
+  return null;
+};
+
 // Simple bot AI - makes random valid moves
 const generateBotMove = (gameState, botPosition) => {
   try {
+    console.log('=== BOT MOVE GENERATION START ===');
     console.log('DEBUG: generateBotMove called with:', { botPosition, gameState });
     
     const botHand = gameState.players[botPosition];
@@ -74,50 +107,107 @@ const generateBotMove = (gameState, botPosition) => {
       };
     }
     
-    // For regular gameplay - just play a random card
+    // For regular gameplay - check for pickup opportunities first
     if (gameState.call) {
-      const randomCardIndex = Math.floor(Math.random() * botHand.length);
-      const cardToPlay = botHand[randomCardIndex];
-      
-      // Remove card from bot's hand only
-      const updatedHand = [...botHand];
-      updatedHand.splice(randomCardIndex, 1);
-      
-      // Update the bot's hand and add card to board
       const currentBoard = gameState.players.board || [];
-      const updatedPlayers = { 
-        ...gameState.players,
-        [botPosition]: updatedHand,
-        board: [...currentBoard, cardToPlay]
-      };
+      console.log('DEBUG: Bot analyzing board state:', { 
+        botPosition, 
+        botHandSize: botHand?.length, 
+        boardSize: currentBoard.length,
+        boardCards: currentBoard
+      });
+      const pickupOpportunity = canBotPickup(botHand, currentBoard);
       
-      // Move to next player
-      const playerOrder = ['plyr2', 'plyr3', 'plyr4', 'plyr1'];
-      const currentIndex = playerOrder.indexOf(botPosition);
-      const nextPlayer = playerOrder[(currentIndex + 1) % 4];
+      if (pickupOpportunity) {
+        // Bot found a pickup - execute it
+        const { handCard, boardCards } = pickupOpportunity;
+        const updatedHand = botHand.filter(card => card !== handCard);
+        const updatedBoard = currentBoard.filter(card => !boardCards.includes(card));
+        
+        // Add collected cards to bot's collection
+        const newCollectedCards = {
+          ...(gameState.collectedCards || { plyr1: [], plyr2: [], plyr3: [], plyr4: [] }),
+          [botPosition]: [...(gameState.collectedCards?.[botPosition] || []), handCard, ...boardCards]
+        };
+        
+        const updatedPlayers = { 
+          ...gameState.players,
+          [botPosition]: updatedHand,
+          board: updatedBoard
+        };
+        
+        // Move to next player
+        const playerOrder = ['plyr2', 'plyr3', 'plyr4', 'plyr1'];
+        const currentIndex = playerOrder.indexOf(botPosition);
+        const nextPlayer = playerOrder[(currentIndex + 1) % 4];
+        
+        console.log('DEBUG: Bot picking up cards:', handCard, 'collected:', boardCards);
+        
+        return {
+          action: 'pickup',
+          players: updatedPlayers,
+          currentTurn: nextPlayer,
+          moveCount: gameState.moveCount + 1,
+          collectedCards: newCollectedCards,
+          // Add specific cards picked up for notification
+          pickedUpCards: [handCard, ...boardCards],
+          // Preserve all other game state
+          deck: gameState.deck,
+          call: gameState.call,
+          boardVisible: gameState.boardVisible,
+          dealVisible: gameState.dealVisible,
+          remainingCardsDealt: gameState.remainingCardsDealt,
+          showDRCButton: gameState.showDRCButton,
+          team1SeepCount: gameState.team1SeepCount,
+          team2SeepCount: gameState.team2SeepCount,
+          team1Points: gameState.team1Points,
+          team2Points: gameState.team2Points,
+          lastCollector: gameState.lastCollector
+        };
+      } else {
+        // No pickup available - just throw away a random card
+        const randomCardIndex = Math.floor(Math.random() * botHand.length);
+        const cardToPlay = botHand[randomCardIndex];
+        
+        // Remove card from bot's hand only
+        const updatedHand = [...botHand];
+        updatedHand.splice(randomCardIndex, 1);
+        
+        // Update the bot's hand and add card to board
+        const updatedPlayers = { 
+          ...gameState.players,
+          [botPosition]: updatedHand,
+          board: [...currentBoard, cardToPlay]
+        };
+        
+        // Move to next player
+        const playerOrder = ['plyr2', 'plyr3', 'plyr4', 'plyr1'];
+        const currentIndex = playerOrder.indexOf(botPosition);
+        const nextPlayer = playerOrder[(currentIndex + 1) % 4];
+        
+        console.log('DEBUG: Bot throwing away card:', cardToPlay, 'moving to next player:', nextPlayer);
+        console.log('DEBUG: Updated board:', updatedPlayers.board);
       
-      console.log('DEBUG: Bot playing card:', cardToPlay, 'moving to next player:', nextPlayer);
-      console.log('DEBUG: Updated board:', updatedPlayers.board);
-      
-      return {
-        action: 'throwAway',
-        players: updatedPlayers,
-        currentTurn: nextPlayer,
-        moveCount: gameState.moveCount + 1,
-        // Preserve all other game state
-        deck: gameState.deck,
-        call: gameState.call,
-        boardVisible: gameState.boardVisible,
-        collectedCards: gameState.collectedCards,
-        dealVisible: gameState.dealVisible,
-        remainingCardsDealt: gameState.remainingCardsDealt,
-        showDRCButton: gameState.showDRCButton,
-        team1SeepCount: gameState.team1SeepCount,
-        team2SeepCount: gameState.team2SeepCount,
-        team1Points: gameState.team1Points,
-        team2Points: gameState.team2Points,
-        lastCollector: gameState.lastCollector
-      };
+        return {
+          action: 'throwAway',
+          players: updatedPlayers,
+          currentTurn: nextPlayer,
+          moveCount: gameState.moveCount + 1,
+          // Preserve all other game state
+          deck: gameState.deck,
+          call: gameState.call,
+          boardVisible: gameState.boardVisible,
+          collectedCards: gameState.collectedCards,
+          dealVisible: gameState.dealVisible,
+          remainingCardsDealt: gameState.remainingCardsDealt,
+          showDRCButton: gameState.showDRCButton,
+          team1SeepCount: gameState.team1SeepCount,
+          team2SeepCount: gameState.team2SeepCount,
+          team1Points: gameState.team1Points,
+          team2Points: gameState.team2Points,
+          lastCollector: gameState.lastCollector
+        };
+      }
     }
     
     console.log('DEBUG: No valid move conditions met');

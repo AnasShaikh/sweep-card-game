@@ -111,7 +111,22 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
             
             // Show move notifications for all players
             const getPlayerName = (playerId) => {
-                const playerPosition = Object.entries(data.players || {}).find(([pos, id]) => id === playerId)?.[0];
+                // For bots (negative IDs), find position by checking which position has this ID
+                let playerPosition = null;
+                
+                // Check current game players object for the ID
+                for (const [pos, id] of Object.entries(players || {})) {
+                    if (id === playerId) {
+                        playerPosition = pos;
+                        break;
+                    }
+                }
+                
+                // If not found, check data.players as fallback
+                if (!playerPosition) {
+                    playerPosition = Object.entries(data.players || {}).find(([pos, id]) => id === playerId)?.[0];
+                }
+                
                 const playerData = playerNames[playerPosition];
                 
                 if (typeof playerData === 'object' && playerData.name) {
@@ -121,7 +136,7 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
                 } else if (playerId === user.id) {
                     return 'You';
                 }
-                return 'Player';
+                return `Player ${playerPosition || playerId}`;
             };
             
             const playerName = getPlayerName(player);
@@ -131,12 +146,71 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
             if (action === 'makeCall' && data.call) {
                 notificationMessage = `${playerName} called ${data.call}`;
             } else if (action === 'throwAway') {
-                notificationMessage = `${playerName} threw a card`;
+                // Try to find which card was thrown by comparing board states
+                const oldBoard = players.board || [];
+                const newBoard = data.players?.board || [];
+                const newCards = newBoard.filter(card => !oldBoard.includes(card));
+                
+                if (newCards.length > 0) {
+                    notificationMessage = `${playerName} threw: ${newCards[0]}`;
+                } else {
+                    notificationMessage = `${playerName} threw a card`;
+                }
             } else if (action === 'pickup') {
-                const oldCollected = collectedCards[Object.entries(data.players || {}).find(([, id]) => id === player)?.[0]] || [];
-                const newCollected = data.collectedCards[Object.entries(data.players || {}).find(([, id]) => id === player)?.[0]] || [];
-                const cardsPickedUp = newCollected.length - oldCollected.length;
-                notificationMessage = `${playerName} picked up ${cardsPickedUp} card${cardsPickedUp !== 1 ? 's' : ''}`;
+                // Find player position for this bot/player ID
+                let playerPosition = null;
+                
+                // First, try to find position in current players object
+                for (const [pos, id] of Object.entries(players || {})) {
+                    if (id === player) {
+                        playerPosition = pos;
+                        break;
+                    }
+                }
+                
+                // If not found, try in data.players (for updated state)
+                if (!playerPosition) {
+                    for (const [pos, id] of Object.entries(data.players || {})) {
+                        if (id === player) {
+                            playerPosition = pos;
+                            break;
+                        }
+                    }
+                }
+                
+                console.log('DEBUG: Pickup notification - player:', player, 'position found:', playerPosition);
+                console.log('DEBUG: Current players:', players);
+                console.log('DEBUG: Data players:', data.players);
+                
+                // Check if the action data includes specific cards picked up (for bots)
+                if (data.pickedUpCards && data.pickedUpCards.length > 0) {
+                    const cardsList = data.pickedUpCards.join(', ');
+                    notificationMessage = `${playerName} picked up: ${cardsList}`;
+                    console.log('DEBUG: Using pickedUpCards from action data:', data.pickedUpCards);
+                } else if (playerPosition) {
+                    const oldCollected = collectedCards[playerPosition] || [];
+                    const newCollected = data.collectedCards[playerPosition] || [];
+                    
+                    console.log('DEBUG: Old collected:', oldCollected);
+                    console.log('DEBUG: New collected:', newCollected);
+                    
+                    // Find the specific cards that were just picked up
+                    const cardsJustPickedUp = newCollected.slice(oldCollected.length);
+                    const cardsPickedUp = cardsJustPickedUp.length;
+                    
+                    console.log('DEBUG: Cards just picked up:', cardsJustPickedUp);
+                    
+                    if (cardsPickedUp > 0) {
+                        // Show the specific cards picked up
+                        const cardsList = cardsJustPickedUp.join(', ');
+                        notificationMessage = `${playerName} picked up: ${cardsList}`;
+                    } else {
+                        notificationMessage = `${playerName} picked up ${cardsPickedUp} card${cardsPickedUp !== 1 ? 's' : ''}`;
+                    }
+                } else {
+                    console.log('DEBUG: Player position not found, using fallback message');
+                    notificationMessage = `${playerName} made a pickup`;
+                }
             } else if (action === 'stack') {
                 const oldBoard = players.board || [];
                 const newBoard = data.players?.board || [];
