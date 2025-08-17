@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import initialDeck from './initialDeck';
 import TableUI from './TableUI';
 import {
@@ -170,13 +170,34 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
         };
     }, [socket]);
     
+    const dealRemainingCards = useCallback(() => {
+        let remainingCards = [...deck];
+        let newPlayers = { ...players };
+        newPlayers.plyr1.push(...remainingCards.splice(0, 8));
+        newPlayers.plyr2.push(...remainingCards.splice(0, 8));
+        newPlayers.plyr3.push(...remainingCards.splice(0, 8));
+        newPlayers.plyr4.push(...remainingCards.splice(0, 8));
+        
+        setPlayers(newPlayers);
+        setDeck(remainingCards);
+        setRemainingCardsDealt(true);
+        setShowDRCButton(false);
+        
+        if (onGameAction) {
+            onGameAction('dealRemainingCards', {
+                players: newPlayers,
+                deck: remainingCards
+            });
+        }
+    }, [deck, players, onGameAction]);
+    
     // Auto-deal remaining cards after move 3
     useEffect(() => {
         if (moveCount === 4 && !remainingCardsDealt && initialized) {
             console.log('Auto-dealing remaining cards after move 3...');
             dealRemainingCards();
         }
-    }, [moveCount, remainingCardsDealt, initialized]);
+    }, [moveCount, remainingCardsDealt, initialized, dealRemainingCards]);
     
     // Check for end of round and assign remaining cards
     const checkEndOfRound = (newPlayers, newCollectedCards, newLastCollector) => {
@@ -235,26 +256,6 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
         team2Points, lastCollector
     ]);
 
-    const dealRemainingCards = () => {
-        let remainingCards = [...deck];
-        let newPlayers = { ...players };
-        newPlayers.plyr1.push(...remainingCards.splice(0, 8));
-        newPlayers.plyr2.push(...remainingCards.splice(0, 8));
-        newPlayers.plyr3.push(...remainingCards.splice(0, 8));
-        newPlayers.plyr4.push(...remainingCards.splice(0, 8));
-        
-        setPlayers(newPlayers);
-        setDeck(remainingCards);
-        setRemainingCardsDealt(true);
-        setShowDRCButton(false);
-        
-        if (onGameAction) {
-            onGameAction('dealRemainingCards', {
-                players: newPlayers,
-                deck: remainingCards
-            });
-        }
-    };
 
     const handleCall = (callValue) => {
         setCall(callValue);
