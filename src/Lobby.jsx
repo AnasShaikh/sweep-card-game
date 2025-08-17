@@ -69,6 +69,7 @@ const Lobby = ({ user, authenticatedFetch }) => {
     navigate(`/game/${gameId}`);
   };
 
+
   const resumeGame = (gameId) => {
     navigate(`/game/${gameId}`);
   };

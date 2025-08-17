@@ -194,6 +194,30 @@ const GameRoom = ({ user, authenticatedFetch }) => {
     }
   };
   
+  const fillWithBots = async () => {
+    try {
+      setError('');
+      
+      const response = await authenticatedFetch(`/api/games/${gameId}/fill-bots`, {
+        method: 'POST'
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to add bots');
+      }
+      
+      const data = await response.json();
+      console.log('Bots added successfully:', data);
+      
+      // Refresh game data to show updated player count
+      await loadGame();
+    } catch (err) {
+      console.error('Error adding bots:', err);
+      setError(err.message);
+    }
+  };
+  
   const getUserPosition = () => {
     if (!game) return null;
     return Object.entries(game.players)
@@ -319,9 +343,14 @@ const GameRoom = ({ user, authenticatedFetch }) => {
               const playerName = game.playerNames?.[pos];
               const isMe = playerId === user.id;
               
+              // Handle both string names (human players) and object names (bots)
+              const displayName = typeof playerName === 'object' && playerName?.name 
+                ? `${playerName.name} (Bot)` 
+                : playerName || 'Empty';
+              
               return (
                 <div key={pos} className={`player-slot ${isMe ? 'current-user' : ''} ${playerId ? 'occupied' : 'empty'}`}>
-                  <strong>{pos}:</strong> {playerName || 'Empty'}
+                  <strong>{pos}:</strong> {displayName}
                   {isMe && ' (You)'}
                 </div>
               );
@@ -341,6 +370,13 @@ const GameRoom = ({ user, authenticatedFetch }) => {
           <div className="waiting-message">
             <p>Waiting for more players... ({playerCount}/4)</p>
             <small>Share this game ID with friends: <strong>{gameId}</strong></small>
+            <button 
+              onClick={() => fillWithBots()}
+              className="fill-bots-btn"
+              style={{backgroundColor: '#28a745', color: 'white', marginTop: '10px', padding: '10px 20px'}}
+            >
+              Fill with Bots
+            </button>
           </div>
         )}
         

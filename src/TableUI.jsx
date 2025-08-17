@@ -13,6 +13,20 @@ import {
     isTeammate     
 } from './tableLogic';
 
+// Helper function to get display name for players (handles both human players and bots)
+const getPlayerDisplayName = (playerPosition, playerNames) => {
+    const playerData = playerNames[playerPosition];
+    if (!playerData) return 'Unknown';
+    
+    // Handle bot players (object format)
+    if (typeof playerData === 'object' && playerData.name) {
+        return playerData.name;
+    }
+    
+    // Handle human players (string format)
+    return playerData;
+};
+
 const getCreatorDisplayName = (stackString, currentPosition, playerNames) => {
     const creator = getStackCreator(stackString);
     if (!creator) return '';
@@ -20,15 +34,16 @@ const getCreatorDisplayName = (stackString, currentPosition, playerNames) => {
     if (creator === currentPosition) {
         return 'You';
     } else if (isTeammate(creator, currentPosition)) {
-        return `${playerNames[creator]} (Teammate)`;
+        return `${getPlayerDisplayName(creator, playerNames)} (Teammate)`;
     } else {
-        return `${playerNames[creator]} (Opponent)`;
+        return `${getPlayerDisplayName(creator, playerNames)} (Opponent)`;
     }
 };
 
 export default function TableUI({
     // Game State
     players,
+    botMoveNotification,
     currentTurn,
     position,
     playerNames,
@@ -67,6 +82,9 @@ export default function TableUI({
     // State to track if we're on mobile
     const [isMobile, setIsMobile] = useState(false);
     
+    // Local notification state for testing
+    const [localNotification, setLocalNotification] = useState(null);
+    
     // Check screen size on mount and resize
     useEffect(() => {
         const checkScreenSize = () => {
@@ -79,8 +97,17 @@ export default function TableUI({
         return () => window.removeEventListener('resize', checkScreenSize);
     }, []);
     
+    // Test notification on component mount
+    useEffect(() => {
+        console.log('TABLEUI COMPONENT MOUNTED');
+        setLocalNotification('TableUI Test! 🎮');
+        setTimeout(() => setLocalNotification(null), 4000);
+    }, []);
+    
     const renderBoardCards = () => {
         console.log('Board cards:', players.board);
+        console.log('NOTIFICATION TEST - botMoveNotification:', botMoveNotification);
+        console.log('NOTIFICATION TEST - localNotification:', localNotification);
         return players.board.map((card, cardIndex) => {
             if (card.startsWith('Stack of')) {
                 const stackValue = getStackValue(card);
@@ -174,24 +201,30 @@ export default function TableUI({
         return (
             <div className={`playerArea ${isCurrentPlayer ? 'current-player' : ''} ${isMyPlayer ? 'my-player' : ''}`} id={playerId} key={playerId}>
                 <h3>
-                    {playerNames[playerId]} 
+                    {getPlayerDisplayName(playerId, playerNames)} 
                     {currentTurn === playerId ? ' (Current Turn)' : ''}
                     {isMobile && position === playerId ? ' (You)' : ''}
                 </h3>
                 <div className="cardDivPlay">
-                    {currentTurn === playerId && isMyTurn ? renderHandCards() : players[playerId].map((card, cardIndex) => (
-                        <div className='handCard' key={cardIndex}>
-                            {position === playerId ? 
-                                <img src={`/cards/${formatCardName(card)}.svg`} alt={card} className="cardImage" /> : 
-                                <img src="/cards/card_back.svg" alt="Card Back" className="cardImage" />
-                            }
-                        </div>
-                    ))}
+                    {currentTurn === playerId && isMyTurn ? renderHandCards() : players[playerId].map((card, cardIndex) => {
+                        const playerData = playerNames[playerId];
+                        const isBot = typeof playerData === 'object' && playerData.isBot;
+                        const isMyPlayer = position === playerId;
+                        
+                        return (
+                            <div className='handCard' key={cardIndex}>
+                                {isMyPlayer ? 
+                                    <img src={`/cards/${formatCardName(card)}.svg`} alt={card} className="cardImage" /> : 
+                                    <img src="/cards/card_back.svg" alt="Card Back" className="cardImage" />
+                                }
+                            </div>
+                        );
+                    })}
                 </div>
                 <div className="collectedCards">
                     <h4>{isMobile ? 'Collected:' : 'Collected Cards:'}</h4>
                     <div className="cardDiv">
-                        {collectedCards[playerId].map((card, cardIndex) => (
+                        {(collectedCards?.[playerId] || []).map((card, cardIndex) => (
                             <div key={cardIndex} className="collectedCard">
                                 <img src={`/cards/${formatCardName(card)}.svg`} alt={card} className="cardImage" />
                             </div>
@@ -212,10 +245,33 @@ export default function TableUI({
         
         return (
             <div className='playTable'>
+                {/* Move Notification */}
+                {(botMoveNotification || localNotification) && (
+                    <div style={{
+                        position: 'fixed',
+                        top: '10px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        background: '#ff0000',
+                        color: 'white',
+                        padding: '15px 30px',
+                        zIndex: 99999,
+                        fontSize: '18px',
+                        fontWeight: 'bold',
+                        textAlign: 'center',
+                        border: '3px solid yellow',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 8px rgba(0,0,0,0.3)',
+                        minWidth: '300px'
+                    }}>
+                        🎮 {botMoveNotification || localNotification} 🎮
+                    </div>
+                )}
+                
                 {/* Points Section */}
                 <div className="pointsSection">
-                    <h4>Team 1 ({playerNames.plyr1} & {playerNames.plyr3}): {team1Points + calculatePoints([...collectedCards.plyr1, ...collectedCards.plyr3])}</h4>
-                    <h4>Team 2 ({playerNames.plyr2} & {playerNames.plyr4}): {team2Points + calculatePoints([...collectedCards.plyr2, ...collectedCards.plyr4])}</h4>
+                    <h4>Team 1 ({getPlayerDisplayName('plyr1', playerNames)} & {getPlayerDisplayName('plyr3', playerNames)}): {(team1Points || 0) + calculatePoints(collectedCards?.plyr1 || []) + calculatePoints(collectedCards?.plyr3 || [])}</h4>
+                    <h4>Team 2 ({getPlayerDisplayName('plyr2', playerNames)} & {getPlayerDisplayName('plyr4', playerNames)}): {(team2Points || 0) + calculatePoints(collectedCards?.plyr2 || []) + calculatePoints(collectedCards?.plyr4 || [])}</h4>
                 </div>
                 
                 {/* Board - Large and prominent */}
@@ -247,9 +303,32 @@ export default function TableUI({
         
         return (
             <div className='playTable'>
+                {/* Move Notification */}
+                {(botMoveNotification || localNotification) && (
+                    <div style={{
+                        position: 'fixed',
+                        top: '10px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        background: '#ff0000',
+                        color: 'white',
+                        padding: '15px 30px',
+                        zIndex: 99999,
+                        fontSize: '18px',
+                        fontWeight: 'bold',
+                        textAlign: 'center',
+                        border: '3px solid yellow',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 8px rgba(0,0,0,0.3)',
+                        minWidth: '300px'
+                    }}>
+                        🎮 {botMoveNotification || localNotification} 🎮
+                    </div>
+                )}
+                
                 <div className="pointsSection">
-                    <h4>Team 1 ({playerNames.plyr1} & {playerNames.plyr3}) Points: {team1Points + calculatePoints([...collectedCards.plyr1, ...collectedCards.plyr3])}</h4>
-                    <h4>Team 2 ({playerNames.plyr2} & {playerNames.plyr4}) Points: {team2Points + calculatePoints([...collectedCards.plyr2, ...collectedCards.plyr4])}</h4>
+                    <h4>Team 1 ({getPlayerDisplayName('plyr1', playerNames)} & {getPlayerDisplayName('plyr3', playerNames)}) Points: {(team1Points || 0) + calculatePoints(collectedCards?.plyr1 || []) + calculatePoints(collectedCards?.plyr3 || [])}</h4>
+                    <h4>Team 2 ({getPlayerDisplayName('plyr2', playerNames)} & {getPlayerDisplayName('plyr4', playerNames)}) Points: {(team2Points || 0) + calculatePoints(collectedCards?.plyr2 || []) + calculatePoints(collectedCards?.plyr4 || [])}</h4>
                 </div>
                 
                 <div id="plyr1">
@@ -291,7 +370,7 @@ export default function TableUI({
                 {/* Call Phase */}
                 {isMyTurn && moveCount === 1 && currentTurn === 'plyr2' && !call && (
                     <div>
-                        <h4>{isMobile ? 'Your call:' : `${playerNames.plyr2}, make your call:`}</h4>
+                        <h4>{isMobile ? 'Your call:' : `${getPlayerDisplayName('plyr2', playerNames)}, make your call:`}</h4>
                         {checkValidCalls(players.plyr2).map(num => (
                             <button key={num} onClick={() => onCall(num)}>
                                 Call {num}
@@ -303,7 +382,7 @@ export default function TableUI({
                 {/* Game Actions Phase */}
                 {isMyTurn && call && (
                     <div>
-                        {!isMobile && <h4>{`${playerNames[currentTurn]}, choose your action:`}</h4>}
+                        {!isMobile && <h4>{`${getPlayerDisplayName(currentTurn, playerNames)}, choose your action:`}</h4>}
                         
                         {/* Show selection info */}
                         {selectedHandCard && (
@@ -378,8 +457,8 @@ export default function TableUI({
                     <div className="waiting-message">
                         <p>
                             {isMobile ? 
-                                `Waiting for ${playerNames[currentTurn]}...` :
-                                `Waiting for ${playerNames[currentTurn]}'s move...`
+                                `Waiting for ${getPlayerDisplayName(currentTurn, playerNames)}...` :
+                                `Waiting for ${getPlayerDisplayName(currentTurn, playerNames)}'s move...`
                             }
                         </p>
                     </div>

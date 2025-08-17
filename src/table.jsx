@@ -37,6 +37,20 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
     const [team2Points, setTeam2Points] = useState(0);
     const [lastCollector, setLastCollector] = useState(null); // Track who picked up cards last
     const [initialized, setInitialized] = useState(false);
+    const [botMoveNotification, setBotMoveNotification] = useState(null);
+    
+    // Helper function to show move notifications
+    const showMoveNotification = (message) => {
+        console.log('SHOWING NOTIFICATION:', message);
+        setBotMoveNotification(message);
+        setTimeout(() => setBotMoveNotification(null), 4000);
+    };
+    
+    // Test notification on component mount
+    useEffect(() => {
+        console.log('TABLE COMPONENT MOUNTED - Testing notifications');
+        showMoveNotification('Game loaded! 🎮');
+    }, []);
     
     const gameStateRef = useRef();
     const socketListenerSetup = useRef(false);
@@ -94,6 +108,52 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
             console.log('Player:', player);
             console.log('Action:', action);
             console.log('Data:', data);
+            
+            // Show move notifications for all players
+            const getPlayerName = (playerId) => {
+                const playerPosition = Object.entries(data.players || {}).find(([pos, id]) => id === playerId)?.[0];
+                const playerData = playerNames[playerPosition];
+                
+                if (typeof playerData === 'object' && playerData.name) {
+                    return playerData.name; // Bot name
+                } else if (typeof playerData === 'string') {
+                    return playerData; // Human player name
+                } else if (playerId === user.id) {
+                    return 'You';
+                }
+                return 'Player';
+            };
+            
+            const playerName = getPlayerName(player);
+            
+            let notificationMessage = '';
+            
+            if (action === 'makeCall' && data.call) {
+                notificationMessage = `${playerName} called ${data.call}`;
+            } else if (action === 'throwAway') {
+                notificationMessage = `${playerName} threw a card`;
+            } else if (action === 'pickup') {
+                const oldCollected = collectedCards[Object.entries(data.players || {}).find(([, id]) => id === player)?.[0]] || [];
+                const newCollected = data.collectedCards[Object.entries(data.players || {}).find(([, id]) => id === player)?.[0]] || [];
+                const cardsPickedUp = newCollected.length - oldCollected.length;
+                notificationMessage = `${playerName} picked up ${cardsPickedUp} card${cardsPickedUp !== 1 ? 's' : ''}`;
+            } else if (action === 'stack') {
+                const oldBoard = players.board || [];
+                const newBoard = data.players?.board || [];
+                const newStacks = newBoard.filter(card => card.startsWith('Stack of') && !oldBoard.includes(card));
+                if (newStacks.length > 0) {
+                    const stackValue = newStacks[0].match(/Stack of (\d+)/)?.[1];
+                    notificationMessage = `${playerName} created a stack of ${stackValue || '?'}`;
+                } else {
+                    notificationMessage = `${playerName} made a stack`;
+                }
+            }
+            
+            if (notificationMessage) {
+                console.log('SOCKET NOTIFICATION:', notificationMessage);
+                setBotMoveNotification(notificationMessage);
+                setTimeout(() => setBotMoveNotification(null), 4000);
+            }
             
             switch (action) {
                 case 'dealCards':
@@ -258,8 +318,10 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
 
 
     const handleCall = (callValue) => {
+        console.log('handleCall triggered with value:', callValue);
         setCall(callValue);
         setBoardVisible(true);
+        showMoveNotification(`You called ${callValue}`);
         
         if (onGameAction) {
             onGameAction('makeCall', { call: callValue });
@@ -294,6 +356,8 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
     };
 
     const handleConfirmStack = () => {
+        showMoveNotification(`You created a stack`);
+        
         const result = confirmStack(
             selectedStackToAddTo,
             selectedHandCard,
@@ -409,6 +473,9 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
     };
 
     const handlePickupAction = () => {
+        const cardCount = selectedTableCards.length + 1; // +1 for the hand card
+        showMoveNotification(`You picked up ${cardCount} card${cardCount !== 1 ? 's' : ''}`);
+        
         handlePickup(
             selectedHandCard,
             selectedTableCards,
@@ -420,6 +487,8 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
     };
 
     const handleThrowAwayAction = () => {
+        showMoveNotification(`You threw ${selectedHandCard}`);
+        
         const result = handleThrowAway(
             selectedHandCard,
             call,
@@ -479,6 +548,7 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
             currentTurn={currentTurn}
             position={position}
             playerNames={playerNames}
+            botMoveNotification={botMoveNotification}
             boardVisible={boardVisible}
             call={call}
             moveCount={moveCount}

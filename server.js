@@ -36,6 +36,98 @@ app.use(express.static('dist'));
 // In-memory storage for games (will be migrated to database later)
 const games = {};
 
+// Simple bot AI - makes random valid moves
+const generateBotMove = (gameState, botPosition) => {
+  try {
+    console.log('DEBUG: generateBotMove called with:', { botPosition, gameState });
+    
+    const botHand = gameState.players[botPosition];
+    if (!botHand || botHand.length === 0) {
+      console.log('DEBUG: Bot has no cards to play');
+      return null; // No cards to play
+    }
+    
+    // For the call phase (move count 1, plyr2 turn, no call made yet)
+    if (gameState.moveCount === 1 && botPosition === 'plyr2' && !gameState.call) {
+      // Make a random call between 8-13 (valid calls)
+      const validCalls = [8, 9, 10, 11, 12, 13];
+      const randomCall = validCalls[Math.floor(Math.random() * validCalls.length)];
+      console.log('DEBUG: Bot making call:', randomCall);
+      return { 
+        action: 'makeCall',
+        call: randomCall,
+        // Preserve all other game state
+        deck: gameState.deck,
+        players: gameState.players,
+        currentTurn: gameState.currentTurn,
+        moveCount: gameState.moveCount,
+        boardVisible: gameState.boardVisible,
+        collectedCards: gameState.collectedCards,
+        dealVisible: gameState.dealVisible,
+        remainingCardsDealt: gameState.remainingCardsDealt,
+        showDRCButton: gameState.showDRCButton,
+        team1SeepCount: gameState.team1SeepCount,
+        team2SeepCount: gameState.team2SeepCount,
+        team1Points: gameState.team1Points,
+        team2Points: gameState.team2Points,
+        lastCollector: gameState.lastCollector
+      };
+    }
+    
+    // For regular gameplay - just play a random card
+    if (gameState.call) {
+      const randomCardIndex = Math.floor(Math.random() * botHand.length);
+      const cardToPlay = botHand[randomCardIndex];
+      
+      // Remove card from bot's hand only
+      const updatedHand = [...botHand];
+      updatedHand.splice(randomCardIndex, 1);
+      
+      // Update the bot's hand and add card to board
+      const currentBoard = gameState.players.board || [];
+      const updatedPlayers = { 
+        ...gameState.players,
+        [botPosition]: updatedHand,
+        board: [...currentBoard, cardToPlay]
+      };
+      
+      // Move to next player
+      const playerOrder = ['plyr2', 'plyr3', 'plyr4', 'plyr1'];
+      const currentIndex = playerOrder.indexOf(botPosition);
+      const nextPlayer = playerOrder[(currentIndex + 1) % 4];
+      
+      console.log('DEBUG: Bot playing card:', cardToPlay, 'moving to next player:', nextPlayer);
+      console.log('DEBUG: Updated board:', updatedPlayers.board);
+      
+      return {
+        action: 'throwAway',
+        players: updatedPlayers,
+        currentTurn: nextPlayer,
+        moveCount: gameState.moveCount + 1,
+        // Preserve all other game state
+        deck: gameState.deck,
+        call: gameState.call,
+        boardVisible: gameState.boardVisible,
+        collectedCards: gameState.collectedCards,
+        dealVisible: gameState.dealVisible,
+        remainingCardsDealt: gameState.remainingCardsDealt,
+        showDRCButton: gameState.showDRCButton,
+        team1SeepCount: gameState.team1SeepCount,
+        team2SeepCount: gameState.team2SeepCount,
+        team1Points: gameState.team1Points,
+        team2Points: gameState.team2Points,
+        lastCollector: gameState.lastCollector
+      };
+    }
+    
+    console.log('DEBUG: No valid move conditions met');
+    return null; // No valid move
+  } catch (error) {
+    console.error('Error generating bot move:', error);
+    return null;
+  }
+};
+
 // Helper function to get games from database
 const getGamesFromDB = async (userId = null) => {
   try {
@@ -340,6 +432,69 @@ app.get('/api/games/:gameId', authenticateToken, async (req, res) => {
   }
 });
 
+// Fill game with bots
+app.post('/api/games/:gameId/fill-bots', authenticateToken, async (req, res) => {
+  const { gameId } = req.params;
+  
+  try {
+    let game = await getGameFromDB(gameId);
+    
+    if (!game) {
+      return res.status(404).json({ error: 'Game not found' });
+    }
+    
+    if (game.status !== 'waiting') {
+      return res.status(400).json({ error: 'Can only add bots to waiting games' });
+    }
+    
+    // Count current players
+    const currentPlayers = Object.values(game.players).filter(Boolean).length;
+    if (currentPlayers >= 4) {
+      return res.status(400).json({ error: 'Game is already full' });
+    }
+    
+    // Add bots to fill remaining slots
+    const updatedPlayers = { ...game.players };
+    const updatedPlayerNames = { ...game.playerNames };
+    let botCount = 1;
+    
+    for (const position of ['plyr1', 'plyr2', 'plyr3', 'plyr4']) {
+      if (!updatedPlayers[position]) {
+        const botId = -botCount; // Negative IDs for bots
+        updatedPlayers[position] = botId;
+        updatedPlayerNames[position] = {
+          name: `Bot ${botCount}`,
+          isBot: true,
+          difficulty: 'easy'
+        };
+        botCount++;
+      }
+    }
+    
+    // Update game in database
+    await updateGameInDB(gameId, {
+      players: updatedPlayers,
+      playerNames: updatedPlayerNames
+    });
+    
+    // Update memory storage for consistency
+    if (games[gameId]) {
+      games[gameId].players = updatedPlayers;
+      games[gameId].playerNames = updatedPlayerNames;
+    }
+    
+    res.json({ 
+      success: true, 
+      message: 'Bots added successfully',
+      players: updatedPlayers,
+      playerNames: updatedPlayerNames
+    });
+  } catch (error) {
+    console.error('Error adding bots to game:', error);
+    res.status(500).json({ error: 'Failed to add bots' });
+  }
+});
+
 // Catch-all to serve the React app
 app.get('*', (req, res) => {
   res.sendFile(join(__dirname, 'dist', 'index.html'));
@@ -624,6 +779,63 @@ io.on('connection', (socket) => {
         action, 
         data 
       });
+      
+      // Check if it's now a bot's turn and trigger bot move
+      if (action === 'updateGameState' && data.currentTurn) {
+        const currentPlayerId = game.players[data.currentTurn];
+        const currentPlayerData = game.playerNames[data.currentTurn];
+        
+        console.log(`DEBUG: Checking if ${data.currentTurn} is a bot:`, {
+          playerId: currentPlayerId,
+          playerData: currentPlayerData,
+          isNegativeId: currentPlayerId < 0,
+          isObject: typeof currentPlayerData === 'object',
+          isBot: currentPlayerData?.isBot
+        });
+        
+        // Check if current player is a bot (negative ID and isBot flag)
+        if (currentPlayerId < 0 && typeof currentPlayerData === 'object' && currentPlayerData.isBot) {
+          console.log(`Bot ${currentPlayerData.name} (${data.currentTurn}) turn detected`);
+          
+          // Schedule bot move with delay to simulate thinking
+          setTimeout(async () => {
+            try {
+              const botMove = generateBotMove(data, data.currentTurn);
+              if (botMove) {
+                console.log(`Bot ${currentPlayerData.name} making move:`, botMove);
+                
+                const { action, ...moveData } = botMove;
+                
+                // Update game state with bot move
+                const updatedData = { ...data, ...moveData };
+                console.log('DEBUG: Updated game state after bot move:', updatedData);
+                game.gameState = updatedData;
+                
+                // Update in database
+                await updateGameInDB(gameId, { gameState: updatedData });
+                
+                // Update memory storage
+                games[gameId] = game;
+                
+                // Broadcast bot move with correct action type
+                console.log(`Broadcasting bot move to room ${gameId}:`, {
+                  player: currentPlayerId,
+                  action: action, 
+                  data: moveData
+                });
+                
+                io.to(gameId).emit('gameAction', { 
+                  player: currentPlayerId, 
+                  action: action, 
+                  data: moveData 
+                });
+              }
+            } catch (error) {
+              console.error('Error in bot move:', error);
+            }
+          }, 1000 + Math.random() * 2000); // 1-3 second delay
+        }
+      }
     } catch (error) {
       console.error('Error in gameAction:', error);
     }

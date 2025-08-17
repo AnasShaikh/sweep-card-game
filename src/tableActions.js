@@ -456,8 +456,8 @@ export const performPickup = (
     }
     
     const newCollectedCards = {
-        ...collectedCards,
-        [currentTurn]: [...collectedCards[currentTurn], selectedHandCard, ...allTableCards]
+        ...(collectedCards || { plyr1: [], plyr2: [], plyr3: [], plyr4: [] }),
+        [currentTurn]: [...(collectedCards?.[currentTurn] || []), selectedHandCard, ...allTableCards]
     };
     
     const nextPlayerTurn = nextPlayer(currentTurn);
@@ -571,8 +571,8 @@ export const handleEndOfRound = (players, lastCollector, collectedCards) => {
     console.log(`End of round: Assigning ${players.board.length} remaining cards to ${lastCollector}`);
     
     const newCollectedCards = {
-        ...collectedCards,
-        [lastCollector]: [...collectedCards[lastCollector], ...players.board]
+        ...(collectedCards || { plyr1: [], plyr2: [], plyr3: [], plyr4: [] }),
+        [lastCollector]: [...(collectedCards?.[lastCollector] || []), ...players.board]
     };
     
     const newPlayers = {

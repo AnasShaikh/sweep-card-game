@@ -255,7 +255,25 @@ export const nextPlayer = (current) => {
 };
 
 export const calculatePoints = (collectedCards) => {
+    // Safety check - ensure we have a valid array
+    if (!Array.isArray(collectedCards)) {
+        console.warn('calculatePoints called with non-array:', collectedCards);
+        return 0;
+    }
+    
     return collectedCards.reduce((total, card) => {
+        // Ensure total is a number
+        if (typeof total !== 'number' || isNaN(total)) {
+            console.warn('calculatePoints: invalid total value:', total);
+            total = 0;
+        }
+        
+        // Ensure card is a string
+        if (typeof card !== 'string') {
+            console.warn('calculatePoints: invalid card type:', card, typeof card);
+            return total;
+        }
+        
         // Handle stack strings - extract individual cards from stacks
         if (card.startsWith('Stack of')) {
             const cardParts = card.split(': ')[1] ? card.split(': ')[1].split(' + ') : [];
