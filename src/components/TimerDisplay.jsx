@@ -59,6 +59,7 @@ const TimerDisplay = ({ timeLeft, isActive, playerId, playerNames, currentPositi
                     {timeLeft <= 5 ? '⚠️ Time almost up!' : '⏰ 10 seconds left!'}
                 </div>
             )}
+            
         </div>
     );
 };

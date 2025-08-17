@@ -549,7 +549,8 @@ export const handleThrowAway = (
             team1SeepCount,
             team2SeepCount,
             showDRCButton: nextShowDRCButton,
-            lastCollector // Pass through last collector (unchanged for throw action)
+            lastCollector, // Pass through last collector (unchanged for throw action)
+            thrownCard: selectedHandCard // Include the card that was thrown
         });
     }
 

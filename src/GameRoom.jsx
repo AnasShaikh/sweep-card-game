@@ -63,7 +63,7 @@ const GameRoom = ({ user, authenticatedFetch }) => {
     };
     
     const handleGameStarted = (startedGame) => {
-      console.log(`${user.username} received game started:`, startedGame);
+      console.log(`Game started, redirecting to table...`);
       const timestamp = Date.now();
       gameStateRef.current = { ...startedGame, timestamp };
       setGame(startedGame);

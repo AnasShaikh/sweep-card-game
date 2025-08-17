@@ -40,10 +40,13 @@
   font-weight: 600;
 }
 
-/* Timer Display for desktop */
+/* Timer Display for desktop - positioned at top center, compact */
 .timer-container {
-  grid-column: 1 / span 3;
-  grid-row: 2;
+  position: fixed;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
 }
 
 /* Board Area */
@@ -828,6 +831,10 @@
 /* Mobile timer styles */
 @media (max-width: 600px) {
   .timer-container {
+    position: relative;
+    top: auto;
+    left: auto;
+    transform: none;
     max-width: 100%;
     margin: 8px 0;
     padding: 10px;

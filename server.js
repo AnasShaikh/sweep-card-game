@@ -65,8 +65,12 @@ function startMoveTimer(gameId, playerId, playerData) {
     return;
   }
 
-  // Clear any existing timer for this game
-  clearMoveTimer(gameId);
+  // Check if there's already an active timer for this game
+  const existingTimer = gameTimers.get(gameId);
+  if (existingTimer) {
+    console.log(`⚠️ Timer already active for game ${gameId} (player: ${existingTimer.playerId}), clearing it first`);
+    clearMoveTimer(gameId);
+  }
 
   const timerId = setTimeout(async () => {
     console.log(`⏰ Timer expired for player ${playerId} in game ${gameId}`);
@@ -78,12 +82,28 @@ function startMoveTimer(gameId, playerId, playerData) {
 
   console.log(`⏱️ Timer started for player ${playerId} in game ${gameId} (${MOVE_TIMEOUT_SECONDS}s)`);
 
+  // Special debug for player 4 timer broadcast
+  if (playerId === 'plyr4') {
+    console.log('🚨 PLAYER 4 SERVER TIMER DEBUG:', {
+      gameId,
+      playerId,
+      timeLimit: MOVE_TIMEOUT_SECONDS,
+      startTime,
+      roomMembers: Array.from(io.sockets.adapter.rooms.get(gameId) || [])
+    });
+  }
+
   // Broadcast timer start to all players
   io.to(gameId).emit('timerStart', {
     playerId,
     timeLimit: MOVE_TIMEOUT_SECONDS,
     startTime
   });
+  
+  // Extra verification for player 4
+  if (playerId === 'plyr4') {
+    console.log('🚨 TIMER BROADCAST SENT FOR PLAYER 4');
+  }
 }
 
 async function executeAutoMove(gameId, playerId) {
@@ -606,6 +626,18 @@ io.on('connection', (socket) => {
         socket.join(gameId);
         console.log(`Socket ${socket.id} (user: ${userId}) successfully joined room ${gameId}`);
         
+        // Special debug for player 4 room membership
+        const playerPosition = Object.entries(game.players).find(([pos, id]) => id === userId)?.[0];
+        if (playerPosition === 'plyr4') {
+          console.log('🚨 PLAYER 4 ROOM JOIN DEBUG:', {
+            userId,
+            socketId: socket.id,
+            gameId,
+            playerPosition,
+            roomMembers: Array.from(io.sockets.adapter.rooms.get(gameId) || [])
+          });
+        }
+        
         // Sync memory with database
         games[gameId] = game;
         
@@ -872,80 +904,84 @@ io.on('connection', (socket) => {
         console.log(`🎯 DEBUG: Game status now set to:`, game.status);
       }
       
+      // Find the player position from userId for better client-side processing
+      let playerPosition = null;
+      for (const [pos, id] of Object.entries(game.players)) {
+        if (id === userId) {
+          playerPosition = pos;
+          break;
+        }
+      }
+      
       // Broadcast to all players in the game
       socket.to(gameId).emit('gameAction', { 
-        player: userId, 
+        player: userId,
+        playerPosition, // Add position for easier client processing
         action, 
         data 
       });
       
-      // Clear any existing timer on any player action (except auto moves)
-      if (action !== 'autoMove') {
+      // Clear any existing timer on actual game actions (not just state updates)
+      if (['makeCall', 'throwAway', 'pickup', 'stack'].includes(action)) {
+        console.log(`🧹 Clearing timer due to action: ${action}`);
         clearMoveTimer(gameId);
       }
 
       // Check if it's now a bot's turn and trigger bot move OR start timer for human player
       if (action === 'updateGameState' && data.currentTurn) {
-        const currentPlayerId = game.players[data.currentTurn];
-        const currentPlayerData = game.playerNames[data.currentTurn];
+        // Simple logic: if no active timer exists for this game, start one for current turn
+        const activeTimer = gameTimers.get(gameId);
+        const needsTimer = !activeTimer;
         
-        console.log(`DEBUG: Checking turn for ${data.currentTurn}:`, {
-          playerId: currentPlayerId,
-          playerData: currentPlayerData,
-          isNegativeId: currentPlayerId < 0,
-          isObject: typeof currentPlayerData === 'object',
-          isBot: currentPlayerData?.isBot
-        });
+        console.log(`🔍 Turn: ${data.currentTurn}, Active timer: ${activeTimer?.playerId || 'none'}, Needs timer: ${needsTimer}`);
         
-        // Check if current player is a bot (negative ID and isBot flag)
-        if (currentPlayerId < 0 && typeof currentPlayerData === 'object' && currentPlayerData.isBot) {
-          console.log(`Bot ${currentPlayerData.name} (${data.currentTurn}) turn detected`);
+        if (needsTimer) {
+          const currentPlayerId = game.players[data.currentTurn];
+          const currentPlayerData = game.playerNames[data.currentTurn];
           
-          // Schedule bot move with delay to simulate thinking
-          setTimeout(async () => {
-            try {
-              // Get the latest complete game state from database for bot move
-              const latestGame = await getGameFromDB(gameId);
-              const completeGameState = latestGame?.gameState || game.gameState || data;
-              const botMove = generateBotMove(completeGameState, data.currentTurn);
-              if (botMove) {
-                console.log(`Bot ${currentPlayerData.name} making move:`, botMove);
-                
-                const { action, ...moveData } = botMove;
-                
-                // Update game state with bot move, preserving current state
-                const currentGameState = game.gameState || data;
-                const updatedData = { ...currentGameState, ...moveData };
-                console.log('DEBUG: Updated game state after bot move:', updatedData);
-                game.gameState = updatedData;
-                
-                // Update in database
-                await updateGameInDB(gameId, { gameState: updatedData });
-                
-                // Update memory storage
-                games[gameId] = game;
-                
-                // Broadcast bot move with correct action type
-                console.log(`Broadcasting bot move to room ${gameId}:`, {
-                  player: currentPlayerId,
-                  action: action, 
-                  data: moveData
-                });
-                
-                io.to(gameId).emit('gameAction', { 
-                  player: currentPlayerId, 
-                  action: action, 
-                  data: moveData 
-                });
+          // Check if current player is a bot (negative ID and isBot flag)
+          if (currentPlayerId < 0 && typeof currentPlayerData === 'object' && currentPlayerData.isBot) {
+            console.log(`Bot ${currentPlayerData.name} (${data.currentTurn}) turn detected`);
+            
+            // Schedule bot move with delay to simulate thinking
+            setTimeout(async () => {
+              try {
+                // Get the latest complete game state from database for bot move
+                const latestGame = await getGameFromDB(gameId);
+                const completeGameState = latestGame?.gameState || game.gameState || data;
+                const botMove = generateBotMove(completeGameState, data.currentTurn);
+                if (botMove) {
+                  console.log(`Bot ${currentPlayerData.name} making move:`, botMove);
+                  
+                  const { action, ...moveData } = botMove;
+                  
+                  // Update game state with bot move, preserving current state
+                  const currentGameState = game.gameState || data;
+                  const updatedData = { ...currentGameState, ...moveData };
+                  game.gameState = updatedData;
+                  
+                  // Update in database
+                  await updateGameInDB(gameId, { gameState: updatedData });
+                  
+                  // Update memory storage
+                  games[gameId] = game;
+                  
+                  // Broadcast bot move with correct action type
+                  io.to(gameId).emit('gameAction', { 
+                    player: currentPlayerId, 
+                    action: action, 
+                    data: moveData 
+                  });
+                }
+              } catch (error) {
+                console.error('Error in bot move:', error);
               }
-            } catch (error) {
-              console.error('Error in bot move:', error);
-            }
-          }, 1000 + Math.random() * 2000); // 1-3 second delay
-        } else {
-          // It's a human player's turn - start the move timer
-          console.log(`Human player ${data.currentTurn} turn detected - starting timer`);
-          startMoveTimer(gameId, data.currentTurn, currentPlayerData);
+            }, 1000 + Math.random() * 2000); // 1-3 second delay
+          } else {
+            // It's a human player's turn - start the move timer
+            console.log(`🎯 Starting timer for human player ${data.currentTurn}`);
+            startMoveTimer(gameId, data.currentTurn, currentPlayerData);
+          }
         }
       }
     } catch (error) {

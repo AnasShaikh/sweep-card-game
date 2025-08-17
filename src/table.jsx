@@ -190,56 +190,43 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
         console.log('=== SETTING UP SOCKET LISTENERS ===');
         socketListenerSetup.current = true;
         
-        const handleGameAction = ({ player, action, data }) => {
+        const handleGameAction = ({ player, playerPosition, action, data }) => {
             console.log('=== RECEIVED GAME ACTION ===');
             console.log('Player:', player);
+            console.log('PlayerPosition:', playerPosition);
             console.log('Action:', action);
             console.log('Data:', data);
             
             // Show move notifications for all players
-            const getPlayerName = (playerId) => {
-                // For bots (negative IDs), find position by checking which position has this ID
-                let playerPosition = null;
-                
-                // Check current game players object for the ID
-                for (const [pos, id] of Object.entries(players || {})) {
-                    if (id === playerId) {
-                        playerPosition = pos;
-                        break;
+            const getPlayerName = (playerId, position) => {
+                // Use the provided position if available
+                if (position) {
+                    const playerData = playerNames[position];
+                    if (typeof playerData === 'object' && playerData.name) {
+                        return playerData.name; // Bot name
+                    } else if (typeof playerData === 'string') {
+                        return playerData; // Human player name
                     }
                 }
                 
-                // If not found, check data.players as fallback
-                if (!playerPosition) {
-                    playerPosition = Object.entries(data.players || {}).find(([pos, id]) => id === playerId)?.[0];
-                }
-                
-                const playerData = playerNames[playerPosition];
-                
-                if (typeof playerData === 'object' && playerData.name) {
-                    return playerData.name; // Bot name
-                } else if (typeof playerData === 'string') {
-                    return playerData; // Human player name
-                } else if (playerId === user.id) {
+                // Fallback: check if it's the current user
+                if (playerId === user.id) {
                     return 'You';
                 }
-                return `Player ${playerPosition || playerId}`;
+                
+                return `Player ${position || playerId}`;
             };
             
-            const playerName = getPlayerName(player);
+            const playerName = getPlayerName(player, playerPosition);
             
             let notificationMessage = '';
             
             if (action === 'makeCall' && data.call) {
                 notificationMessage = `${playerName} called ${data.call}`;
             } else if (action === 'throwAway') {
-                // Try to find which card was thrown by comparing board states
-                const oldBoard = players.board || [];
-                const newBoard = data.players?.board || [];
-                const newCards = newBoard.filter(card => !oldBoard.includes(card));
-                
-                if (newCards.length > 0) {
-                    notificationMessage = `${playerName} threw: ${newCards[0]}`;
+                // Use the thrown card directly from action data
+                if (data.thrownCard) {
+                    notificationMessage = `${playerName} threw: ${data.thrownCard}`;
                 } else {
                     notificationMessage = `${playerName} threw a card`;
                 }
@@ -432,10 +419,43 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
         };
         
         const handleTimerStart = ({ playerId, timeLimit, startTime }) => {
-            console.log('Timer started for player:', playerId, 'with', timeLimit, 'seconds');
+            console.log('🔔 Timer started for player:', playerId, 'with', timeLimit, 'seconds');
+            console.log('🔔 My position:', position, 'Timer player:', playerId, 'Match:', position === playerId);
+            
+            // Special debug for player 4
+            if (playerId === 'plyr4' || position === 'plyr4') {
+                console.log('🚨 PLAYER 4 CLIENT TIMER DEBUG:', {
+                    myPosition: position,
+                    timerForPlayer: playerId,
+                    isMyTimer: position === playerId,
+                    timeLimit,
+                    startTime,
+                    socketId: socket?.id,
+                    eventReceived: true
+                });
+                
+                // Additional debugging
+                console.log('🚨 PLAYER 4 STATE BEFORE TIMER SET:', {
+                    currentTimerPlayerId: timerPlayerId,
+                    currentTimeLeft: timeLeft,
+                    currentIsTimerActive: isTimerActive
+                });
+            }
+            
             setTimerPlayerId(playerId);
             setTimeLeft(timeLimit);
             setIsTimerActive(true);
+            
+            // Debug after setting state for player 4
+            if (playerId === 'plyr4' || position === 'plyr4') {
+                setTimeout(() => {
+                    console.log('🚨 PLAYER 4 STATE AFTER TIMER SET:', {
+                        timerPlayerId: playerId,
+                        timeLeft: timeLimit,
+                        isTimerActive: true
+                    });
+                }, 100);
+            }
         };
 
         const handleTimerStop = ({ playerId }) => {

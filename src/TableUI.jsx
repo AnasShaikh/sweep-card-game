@@ -289,6 +289,7 @@ export default function TableUI({
                     currentPosition={position}
                 />
                 
+                
                 {/* Board - Large and prominent */}
                 <div className='playerArea' id='board'>
                     <h3>Board</h3>
@@ -351,6 +352,7 @@ export default function TableUI({
                     playerNames={playerNames}
                     currentPosition={position}
                 />
+                
                 
                 {/* Player 1 - Left side, top */}
                 <div id="plyr1">
