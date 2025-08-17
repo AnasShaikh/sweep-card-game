@@ -15,15 +15,23 @@ Main application component with routing and JWT authentication state management.
 - `authenticatedFetch()` - Helper function for API calls with JWT headers
 - Token verification on app startup with auto-logout on invalid tokens
 
+### `src/styles/table.css` ✨ **UPDATED**
+Complete stylesheet for the game table and components including:
+- Desktop layout styles with CSS Grid (playTable, playerArea, board positioning)
+- Mobile responsive design with flex layouts and media queries
+- Card display styles (handCard, stackCard, tableCard, collectedCard, etc.)
+- Stack interaction styles with animations (selected, can-add, hover effects)
+- Timer system styles with color-coded progress bars and warning animations
+- Button and control styles for game actions
+- Animation keyframes for card dealing, pulses, and timer warnings
+
 ### `src/App.css`
-Complete stylesheet for the entire application including:
+Application-wide stylesheet including:
 - Layout styles for main, header, user-info sections
 - Login/registration page styles (login-container, form-group, auth-toggle, etc.)
 - Lobby page styles (lobby-actions, games-list, etc.)
 - Game room styles (player-positions, game-actions, etc.)
-- Table/game styles (playTable, playerArea, cardDivBoard, etc.)
-- Card display styles (handCard, stackCard, collectedCard, etc.)
-- Button and control styles
+- General button and control styles
 
 ### `src/Login.jsx`
 User authentication component with registration and login functionality.
@@ -63,13 +71,19 @@ Main game table component managing game state and player interactions.
 - `handlePerformPickup()` - Executes pickup action with selected cards
 - `handlePickupAction()` - Validates and initiates pickup
 - `handleThrowAwayAction()` - Executes throw away action
+- `handleTimerStart()` - Manages timer activation for player turns
+- `handleTimerStop()` - Handles timer deactivation on moves
+- Timer state management with 30-second countdown and auto-stop on actions
 
 ### `src/TableUI.jsx`
 Pure UI component for rendering the game table interface.
 - `getCreatorDisplayName()` - Formats stack creator name with team info
 - `renderBoardCards()` - Renders board cards including stacks with interaction
 - `renderHandCards()` - Renders current player's hand cards
-- Component renders all player areas, scores, controls, and game state
+- `renderMobileLayout()` - Mobile-optimized layout with responsive design
+- `renderDesktopLayout()` - Desktop layout with CSS grid positioning
+- `renderControls()` - Action buttons and game controls
+- Component renders all player areas, scores, controls, game state, and timer display
 
 ### `src/tableLogic.js`
 Core game logic and utility functions.
@@ -105,6 +119,15 @@ Game action handlers and validation logic.
 ### `src/initialDeck.js`
 Static deck definition.
 - `initialDeck` - Complete 52-card deck array
+
+### `src/components/TimerDisplay.jsx` ✨ **NEW**
+Visual countdown timer component for player move timeouts.
+- `getPlayerDisplayName()` - Formats player name for timer display
+- `getTimerColor()` - Color-codes progress bar (green → yellow → red)
+- `getTimerClass()` - Applies CSS classes for warning states
+- Progress bar with 30-second countdown and percentage calculation
+- Warning animations at 10s and 5s remaining
+- Responsive design for both mobile and desktop layouts
 
 ### `src/auth.js` ✨ **NEW**
 Authentication utilities for JWT-based user management.
@@ -160,11 +183,21 @@ Express server with Socket.IO for real-time multiplayer functionality and JWT au
 - `gameAction` - Handles all game actions (deals, moves, calls)
 - `terminateGame` - Allows players to end active games
 - `gameFinished` - Marks completed games in database
+- `timerStart` - Broadcasts timer activation to all players
+- `timerStop` - Broadcasts timer deactivation to all players
+
+**Timer Management System:** ✨ **NEW**
+- `startMoveTimer()` - Creates 30-second timeout for human players only
+- `clearMoveTimer()` - Stops active timer and broadcasts to clients
+- `executeAutoMove()` - Automatically throws random card on timeout
+- Server-side timer validation to prevent cheating
+- Automatic timer clearing on any player action
 
 **Bot Integration:**
 - Imports `generateBotMove()` from `src/botAI.js` for AI decision making
 - Automatic bot move triggering with 1-3 second realistic delays  
 - Bot move execution and state synchronization
+- Bots bypass timer system (no timeouts for AI players)
 
 **Data Storage:**
 - PostgreSQL database for persistent user and game storage
@@ -216,6 +249,8 @@ CREATE TABLE games (
 
 **AI Bot Players:** Intelligent bots with strategic decision making and rule compliance
 
+**Move Timer System:** ✨ **NEW** 30-second countdown timers with automatic card throwing on timeout
+
 **Team Play:** Players 1&3 vs Players 2&4 with team-specific permissions
 
 **Stack System:** Complex stack creation and modification with loose/tight mechanics
@@ -230,6 +265,8 @@ CREATE TABLE games (
 
 **Game End Detection:** Automatic winner determination and database status updates
 
+**Responsive Design:** Mobile and desktop optimized layouts with touch-friendly controls
+
 ## Authentication Flow ✨ **NEW**
 
 ### **Registration/Login Process**
@@ -243,6 +280,22 @@ CREATE TABLE games (
 1. Client connects to Socket.IO with JWT token
 2. Server verifies token and associates socket with user
 3. All game actions require authenticated socket connection
+
+## Timer System Flow ✨ **NEW**
+
+### **Move Timer Process**
+1. Human player's turn begins - server starts 30-second timer
+2. Server broadcasts `timerStart` event to all clients with countdown
+3. Client displays visual countdown with color-coded progress bar
+4. If player makes move - timer immediately stops and disappears
+5. If timeout occurs - server automatically throws random card
+6. Auto-thrown card triggers normal game flow and next player's timer
+
+### **Timer States & Visual Feedback**
+- **Green (30-21s):** Normal time remaining
+- **Yellow (20-11s):** Warning state with pulse animation
+- **Red (10-1s):** Critical state with urgent animations
+- **Hidden:** No timer for bot players (they move automatically)
 
 ## File Interdependencies & Relationships
 
@@ -266,15 +319,18 @@ src/App.jsx ↔ src/Login.jsx ↔ src/Lobby.jsx ↔ src/GameRoom.jsx ↔ src/tab
 - **server.js** validates credentials and manages JWT tokens
 - **PostgreSQL Database** stores user accounts and game data
 
-### Game Logic Architecture
+### Game Logic Architecture ✨ **UPDATED**
 ```
-src/table.jsx → src/TableUI.jsx → src/tableLogic.js
+src/table.jsx → src/TableUI.jsx → src/components/TimerDisplay.jsx
 src/table.jsx → src/tableActions.js → src/tableLogic.js
+server.js → src/tableActions.js (for auto-move execution)
 ```
-- **src/table.jsx** orchestrates game state and delegates to TableUI for rendering
-- **src/TableUI.jsx** is pure presentation layer, calls event handlers from table.jsx
+- **src/table.jsx** orchestrates game state, timer state, and delegates to TableUI for rendering
+- **src/TableUI.jsx** is pure presentation layer, integrates TimerDisplay component
+- **src/components/TimerDisplay.jsx** provides visual timer countdown with progress bars
 - **src/tableActions.js** contains complex action logic, imports utilities from tableLogic.js
-- **src/tableLogic.js** provides core utilities used by both table.jsx and tableActions.js
+- **src/tableLogic.js** provides core utilities used by table.jsx, tableActions.js, and server.js
+- **server.js** imports tableActions.js for executing automatic moves on timeouts
 
 ### Data Flow Dependencies ✨ **UPDATED**
 ```
@@ -310,13 +366,15 @@ JWT Storage → API Headers → Token Validation
 - **server.js** validates tokens and protects API endpoints
 - **PostgreSQL Database** stores hashed passwords and user data
 
-### Styling Dependencies
+### Styling Dependencies ✨ **UPDATED**
 ```
-src/App.css → [ALL React Components]
+src/App.css → [Login, Lobby, GameRoom Components]
+src/styles/table.css → [Table, TableUI, TimerDisplay Components]
 ```
-- **src/App.css** contains styles for all components including new auth styles
-- Every React component relies on CSS classes defined in App.css
-- Components reference specific CSS classes (e.g., `.playTable`, `.login-container`, `.auth-toggle`)
+- **src/App.css** contains application-wide styles for auth and navigation components
+- **src/styles/table.css** contains game-specific styles including timer animations
+- Table components rely on CSS classes for responsive layouts and visual feedback
+- Timer component uses specialized CSS classes (e.g., `.timer-container`, `.timer-warning`, `.timer-critical`)
 
 ### Key Interdependency Patterns
 
@@ -370,10 +428,14 @@ App.jsx (application state management)
 **Critical Dependencies:**
 - `table.jsx` **CANNOT** function without `tableLogic.js` and `tableActions.js`
 - `TableUI.jsx` **REQUIRES** event handlers from `table.jsx` to be interactive
+- `TableUI.jsx` **IMPORTS** `TimerDisplay.jsx` for timer visualization
 - `GameRoom.jsx` **NEEDS** JWT-authenticated Socket.IO connection to synchronize
 - `server.js` **DEPENDS** on `src/auth.js` for authentication utilities
 - `server.js` **IMPORTS** `src/botAI.js` for AI bot decision making
+- `server.js` **IMPORTS** `src/tableActions.js` for auto-move execution on timeouts
 - `src/botAI.js` **REQUIRES** `src/tableLogic.js` for game utilities and card values
+- `TimerDisplay.jsx` **DEPENDS** on `src/styles/table.css` for animations and styling
 - All protected routes **REQUIRE** valid JWT tokens for access
-- All components **DEPEND** on `App.css` for proper visual rendering
+- Table components **DEPEND** on `src/styles/table.css` for responsive layouts
+- Timer system **NEEDS** server-side validation to prevent timeout manipulation
 - Bot functionality **NEEDS** server-side execution to prevent cheating
