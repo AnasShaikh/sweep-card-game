@@ -37,7 +37,154 @@ app.use(express.static('dist'));
 // In-memory storage for games (will be migrated to database later)
 const games = {};
 
+// Timer management for move timeouts
+const gameTimers = new Map(); // gameId -> { timerId, playerId, startTime }
+const MOVE_TIMEOUT_SECONDS = 30;
 
+// Timer management functions
+function clearMoveTimer(gameId) {
+  const timerData = gameTimers.get(gameId);
+  if (timerData) {
+    clearTimeout(timerData.timerId);
+    gameTimers.delete(gameId);
+    console.log(`⏹️ Timer cleared for game ${gameId}, was for player ${timerData.playerId}`);
+    
+    // Broadcast timer stop to all players
+    io.to(gameId).emit('timerStop', {
+      playerId: timerData.playerId
+    });
+  } else {
+    console.log(`⚠️ No timer found to clear for game ${gameId}`);
+  }
+}
+
+function startMoveTimer(gameId, playerId, playerData) {
+  // Don't start timers for bot players
+  if (typeof playerData === 'object' && playerData.isBot) {
+    console.log(`Skipping timer for bot ${playerData.name}`);
+    return;
+  }
+
+  // Clear any existing timer for this game
+  clearMoveTimer(gameId);
+
+  const timerId = setTimeout(async () => {
+    console.log(`⏰ Timer expired for player ${playerId} in game ${gameId}`);
+    await executeAutoMove(gameId, playerId);
+  }, MOVE_TIMEOUT_SECONDS * 1000);
+
+  const startTime = Date.now();
+  gameTimers.set(gameId, { timerId, playerId, startTime });
+
+  console.log(`⏱️ Timer started for player ${playerId} in game ${gameId} (${MOVE_TIMEOUT_SECONDS}s)`);
+
+  // Broadcast timer start to all players
+  io.to(gameId).emit('timerStart', {
+    playerId,
+    timeLimit: MOVE_TIMEOUT_SECONDS,
+    startTime
+  });
+}
+
+async function executeAutoMove(gameId, playerId) {
+  try {
+    // Get current game state
+    let game = await getGameFromDB(gameId);
+    if (!game) {
+      game = games[gameId];
+    }
+
+    if (!game || !game.gameState) {
+      console.log(`Cannot execute auto move: game ${gameId} not found`);
+      return;
+    }
+
+    const gameState = game.gameState;
+    
+    // Check if it's still this player's turn
+    if (gameState.currentTurn !== playerId) {
+      console.log(`Timer expired for ${playerId} but it's now ${gameState.currentTurn}'s turn. Ignoring.`);
+      return;
+    }
+    
+    const playerHand = gameState.players[playerId];
+
+    if (!playerHand || playerHand.length === 0) {
+      console.log(`Cannot execute auto move: player ${playerId} has no cards`);
+      return;
+    }
+
+    // Pick a random card from player's hand
+    const randomIndex = Math.floor(Math.random() * playerHand.length);
+    const randomCard = playerHand[randomIndex];
+
+    console.log(`🎲 Auto-throwing random card for ${playerId}: ${randomCard}`);
+
+    // Execute throw away action using existing game logic
+    const { handleThrowAway } = await import('./src/tableActions.js');
+    
+    const result = handleThrowAway(
+      randomCard,
+      gameState.call,
+      gameState.moveCount,
+      gameState.players,
+      playerId,
+      gameState.collectedCards,
+      gameState.team1Points,
+      gameState.team2Points,
+      gameState.team1SeepCount,
+      gameState.team2SeepCount,
+      gameState.lastCollector,
+      null // no onGameAction callback needed here
+    );
+
+    if (result) {
+      // Update game state
+      const updatedGameState = {
+        ...gameState,
+        players: result.newPlayers,
+        currentTurn: result.nextPlayerTurn,
+        moveCount: result.nextMoveCount,
+        showDRCButton: result.nextShowDRCButton,
+        lastCollector: result.newLastCollector
+      };
+
+      game.gameState = updatedGameState;
+
+      // Update in database
+      await updateGameInDB(gameId, { gameState: updatedGameState });
+
+      // Update memory storage
+      games[gameId] = game;
+
+      // Clear the timer
+      clearMoveTimer(gameId);
+
+      // Broadcast the auto move to all players
+      io.to(gameId).emit('gameAction', {
+        player: playerId,
+        action: 'autoMove',
+        data: {
+          ...updatedGameState,
+          autoThrownCard: randomCard,
+          isTimeout: true
+        }
+      });
+
+      // Start timer for next player if they're not a bot
+      const nextPlayerId = game.players[result.nextPlayerTurn];
+      const nextPlayerData = game.playerNames[result.nextPlayerTurn];
+      
+      if (nextPlayerId && !(typeof nextPlayerData === 'object' && nextPlayerData.isBot)) {
+        startMoveTimer(gameId, result.nextPlayerTurn, nextPlayerData);
+      }
+
+      console.log(`✅ Auto move completed for ${playerId}, turn passed to ${result.nextPlayerTurn}`);
+    }
+  } catch (error) {
+    console.error('Error executing auto move:', error);
+  }
+}
 
 // Helper function to get games from database
 const getGamesFromDB = async (userId = null) => {
@@ -613,6 +760,15 @@ io.on('connection', (socket) => {
     
     // Broadcast game start with cards already dealt
     io.to(gameId).emit('gameStarted', game);
+
+    // Start timer for the first player (plyr2) if they're not a bot
+    const firstPlayerId = game.players['plyr2'];
+    const firstPlayerData = game.playerNames['plyr2'];
+    
+    if (firstPlayerId && !(typeof firstPlayerData === 'object' && firstPlayerData.isBot)) {
+      console.log(`Starting timer for first player: plyr2`);
+      startMoveTimer(gameId, 'plyr2', firstPlayerData);
+    }
   } catch (error) {
     console.error('Error in startGame:', error);
     socket.emit('error', 'Server error');
@@ -640,6 +796,9 @@ io.on('connection', (socket) => {
       
       // Update game status to terminated
       game.status = 'terminated';
+      
+      // Clear any active timer
+      clearMoveTimer(gameId);
       
       // Update in database FIRST
       await updateGameInDB(gameId, {
@@ -696,6 +855,9 @@ io.on('connection', (socket) => {
         // Mark game as finished
         game.status = 'finished';
         
+        // Clear any active timer
+        clearMoveTimer(gameId);
+        
         // Update in database
         console.log(`🎯 DEBUG: Updating database status to 'finished'`);
         await updateGameInDB(gameId, { 
@@ -717,12 +879,17 @@ io.on('connection', (socket) => {
         data 
       });
       
-      // Check if it's now a bot's turn and trigger bot move
+      // Clear any existing timer on any player action (except auto moves)
+      if (action !== 'autoMove') {
+        clearMoveTimer(gameId);
+      }
+
+      // Check if it's now a bot's turn and trigger bot move OR start timer for human player
       if (action === 'updateGameState' && data.currentTurn) {
         const currentPlayerId = game.players[data.currentTurn];
         const currentPlayerData = game.playerNames[data.currentTurn];
         
-        console.log(`DEBUG: Checking if ${data.currentTurn} is a bot:`, {
+        console.log(`DEBUG: Checking turn for ${data.currentTurn}:`, {
           playerId: currentPlayerId,
           playerData: currentPlayerData,
           isNegativeId: currentPlayerId < 0,
@@ -775,6 +942,10 @@ io.on('connection', (socket) => {
               console.error('Error in bot move:', error);
             }
           }, 1000 + Math.random() * 2000); // 1-3 second delay
+        } else {
+          // It's a human player's turn - start the move timer
+          console.log(`Human player ${data.currentTurn} turn detected - starting timer`);
+          startMoveTimer(gameId, data.currentTurn, currentPlayerData);
         }
       }
     } catch (error) {

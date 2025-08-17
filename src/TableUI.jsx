@@ -12,6 +12,7 @@ import {
     getStackCreator,
     isTeammate     
 } from './tableLogic';
+import TimerDisplay from './components/TimerDisplay';
 
 // Helper function to get display name for players (handles both human players and bots)
 const getPlayerDisplayName = (playerPosition, playerNames) => {
@@ -64,6 +65,11 @@ export default function TableUI({
     collectedCards,
     team1Points,
     team2Points,
+    
+    // Timer State
+    timeLeft,
+    isTimerActive,
+    timerPlayerId,
     
     // Event Handlers
     onHandCardSelection,
@@ -274,6 +280,15 @@ export default function TableUI({
                     <h4>Team 2 ({getPlayerDisplayName('plyr2', playerNames)} & {getPlayerDisplayName('plyr4', playerNames)}): {(team2Points || 0) + calculatePoints(collectedCards?.plyr2 || []) + calculatePoints(collectedCards?.plyr4 || [])}</h4>
                 </div>
                 
+                {/* Timer Display */}
+                <TimerDisplay 
+                    timeLeft={timeLeft}
+                    isActive={isTimerActive}
+                    playerId={timerPlayerId}
+                    playerNames={playerNames}
+                    currentPosition={position}
+                />
+                
                 {/* Board - Large and prominent */}
                 <div className='playerArea' id='board'>
                     <h3>Board</h3>
@@ -327,6 +342,15 @@ export default function TableUI({
                     <h4>Team 1 ({getPlayerDisplayName('plyr1', playerNames)} & {getPlayerDisplayName('plyr3', playerNames)}) Points: {(team1Points || 0) + calculatePoints(collectedCards?.plyr1 || []) + calculatePoints(collectedCards?.plyr3 || [])}</h4>
                     <h4>Team 2 ({getPlayerDisplayName('plyr2', playerNames)} & {getPlayerDisplayName('plyr4', playerNames)}) Points: {(team2Points || 0) + calculatePoints(collectedCards?.plyr2 || []) + calculatePoints(collectedCards?.plyr4 || [])}</h4>
                 </div>
+                
+                {/* Timer Display */}
+                <TimerDisplay 
+                    timeLeft={timeLeft}
+                    isActive={isTimerActive}
+                    playerId={timerPlayerId}
+                    playerNames={playerNames}
+                    currentPosition={position}
+                />
                 
                 {/* Player 1 - Left side, top */}
                 <div id="plyr1">

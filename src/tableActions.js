@@ -13,7 +13,7 @@ import {
     nextPlayer,
     findAllPickupCombinations,
     findAllStackCombinations
-} from './tableLogic';
+} from './tableLogic.js';
 
 export const confirmStack = (
     selectedStackToAddTo,

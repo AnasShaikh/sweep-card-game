@@ -42,6 +42,11 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
     const [gameEnded, setGameEnded] = useState(false);
     const [winner, setWinner] = useState(null);
     
+    // Timer state
+    const [timeLeft, setTimeLeft] = useState(30);
+    const [isTimerActive, setIsTimerActive] = useState(false);
+    const [timerPlayerId, setTimerPlayerId] = useState(null);
+    
     // Helper function to check if game has ended (all cards played)
     const checkGameEnd = () => {
         if (gameEnded) return; // Already ended
@@ -106,6 +111,26 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
         console.log('TABLE COMPONENT MOUNTED - Testing notifications');
         showMoveNotification('Game loaded! 🎮');
     }, []);
+
+    // Timer countdown effect
+    useEffect(() => {
+        let interval;
+        if (isTimerActive && timeLeft > 0) {
+            interval = setInterval(() => {
+                setTimeLeft(prev => {
+                    if (prev <= 1) {
+                        setIsTimerActive(false);
+                        return 0;
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
+        }
+        
+        return () => {
+            if (interval) clearInterval(interval);
+        };
+    }, [isTimerActive, timeLeft]);
     
     const gameStateRef = useRef();
     const socketListenerSetup = useRef(false);
@@ -315,6 +340,8 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
                     setSelectedStackToAddTo(null);
                     setDealVisible(false);
                     setLastCollector(null); // Reset last collector for new round
+                    // Stop any active timer
+                    setIsTimerActive(false);
                     break;
                     
                 case 'dealRemainingCards':
@@ -327,6 +354,8 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
                 case 'makeCall':
                     setCall(data.call);
                     setBoardVisible(true);
+                    // Stop any active timer
+                    setIsTimerActive(false);
                     break;
                     
                 case 'pickup':
@@ -344,6 +373,8 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
                     setSelectedHandCard(null);
                     setSelectedTableCards([]);
                     setSelectedStackToAddTo(null);
+                    // Stop any active timer
+                    setIsTimerActive(false);
                     break;
                     
                 case 'throwAway':
@@ -364,6 +395,35 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
                     setSelectedHandCard(null);
                     setSelectedTableCards([]);
                     setSelectedStackToAddTo(null);
+                    // Stop any active timer
+                    setIsTimerActive(false);
+                    break;
+                    
+                case 'autoMove':
+                    setPlayers(data.players);
+                    setCurrentTurn(data.currentTurn);
+                    setMoveCount(data.moveCount);
+                    setCollectedCards(data.collectedCards);
+                    setTeam1Points(data.team1Points);
+                    setTeam2Points(data.team2Points);
+                    setTeam1SeepCount(data.team1SeepCount);
+                    setTeam2SeepCount(data.team2SeepCount);
+                    setShowDRCButton(data.showDRCButton);
+                    setBoardVisible(true);
+                    if (data.lastCollector !== undefined) {
+                        setLastCollector(data.lastCollector);
+                    }
+                    // Stop any active timer
+                    setIsTimerActive(false);
+                    setSelectedHandCard(null);
+                    setSelectedTableCards([]);
+                    setSelectedStackToAddTo(null);
+                    
+                    // Show timeout notification
+                    if (data.isTimeout && data.autoThrownCard) {
+                        const playerName = getPlayerDisplayName(player, playerNames);
+                        showMoveNotification(`⏰ ${playerName} timed out! Auto-threw: ${data.autoThrownCard}`);
+                    }
                     break;
                     
                 default:
@@ -371,10 +431,28 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
             }
         };
         
+        const handleTimerStart = ({ playerId, timeLimit, startTime }) => {
+            console.log('Timer started for player:', playerId, 'with', timeLimit, 'seconds');
+            setTimerPlayerId(playerId);
+            setTimeLeft(timeLimit);
+            setIsTimerActive(true);
+        };
+
+        const handleTimerStop = ({ playerId }) => {
+            console.log('Timer stopped for player:', playerId);
+            setIsTimerActive(false);
+            setTimerPlayerId(null);
+            setTimeLeft(30);
+        };
+
         socket.on('gameAction', handleGameAction);
+        socket.on('timerStart', handleTimerStart);
+        socket.on('timerStop', handleTimerStop);
         
         return () => {
             socket.off('gameAction', handleGameAction);
+            socket.off('timerStart', handleTimerStart);
+            socket.off('timerStop', handleTimerStop);
             socketListenerSetup.current = false;
         };
     }, [socket]);
@@ -820,6 +898,11 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
             collectedCards={collectedCards}
             team1Points={team1Points}
             team2Points={team2Points}
+            
+            // Timer State
+            timeLeft={timeLeft}
+            isTimerActive={isTimerActive}
+            timerPlayerId={timerPlayerId}
             
             // Event Handlers
             onHandCardSelection={handleHandCardSelection}
