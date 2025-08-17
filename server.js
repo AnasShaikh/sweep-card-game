@@ -800,14 +800,18 @@ io.on('connection', (socket) => {
           // Schedule bot move with delay to simulate thinking
           setTimeout(async () => {
             try {
-              const botMove = generateBotMove(data, data.currentTurn);
+              // Get the latest complete game state from database for bot move
+              const latestGame = await getGameFromDB(gameId);
+              const completeGameState = latestGame?.gameState || game.gameState || data;
+              const botMove = generateBotMove(completeGameState, data.currentTurn);
               if (botMove) {
                 console.log(`Bot ${currentPlayerData.name} making move:`, botMove);
                 
                 const { action, ...moveData } = botMove;
                 
-                // Update game state with bot move
-                const updatedData = { ...data, ...moveData };
+                // Update game state with bot move, preserving current state
+                const currentGameState = game.gameState || data;
+                const updatedData = { ...currentGameState, ...moveData };
                 console.log('DEBUG: Updated game state after bot move:', updatedData);
                 game.gameState = updatedData;
                 
