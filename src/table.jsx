@@ -7,7 +7,8 @@ import {
     checkValidCalls,
     getCardValue,
     formatCardName,
-    calculatePoints
+    calculatePoints,
+    getTeam
 } from './tableLogic';
 import {
     confirmStack,
@@ -832,55 +833,59 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
 
     // Game End Screen
     if (gameEnded && winner) {
+        const userTeam = getTeam(position);
+        const userWon = winner.team === userTeam;
+        
         return (
-            <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                minHeight: '50vh',
-                padding: '2rem',
-                backgroundColor: '#f8f9fa',
-                borderRadius: '1rem',
-                margin: '2rem',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
-            }}>
-                <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-                    <h1 style={{ 
-                        fontSize: '3rem', 
-                        color: winner.team === 'tie' ? '#6c757d' : (winner.team === 'team1' ? '#28a745' : '#007bff'),
-                        marginBottom: '1rem'
-                    }}>
-                        🏆 {winner.team === 'tie' ? 'Tie Game!' : 'Game Over!'}
-                    </h1>
-                    
-                    <h2 style={{ 
-                        fontSize: '2rem', 
-                        color: '#495057',
-                        marginBottom: '1rem'
-                    }}>
-                        {winner.team === 'tie' ? `Both teams scored ${winner.score} points!` : `${winner.name} Wins!`}
-                    </h2>
-                    
-                    <div style={{ 
-                        backgroundColor: 'white',
-                        padding: '1.5rem',
-                        borderRadius: '0.5rem',
-                        marginBottom: '2rem',
-                        boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
-                    }}>
-                        <h3 style={{ marginBottom: '1rem', color: '#343a40' }}>Final Scores</h3>
-                        <div style={{ display: 'flex', justifyContent: 'space-around', gap: '2rem' }}>
-                            <div>
-                                <h4 style={{ color: winner.team === 'team1' ? '#28a745' : '#6c757d' }}>
-                                    Team 1: {winner.team === 'team1' ? winner.score : winner.opponentScore} points
-                                </h4>
+            <div className="game-end-screen">
+                <div className="victory-header">
+                    {winner.team === 'tie' ? (
+                        <>
+                            <div className="celebration-emoji">🤝</div>
+                            <h1 className="victory-title">What a Match!</h1>
+                            <h2 className="victory-subtitle">Perfect Tie Game</h2>
+                            <p className="victory-message">Both teams played brilliantly and scored exactly {winner.score} points!</p>
+                        </>
+                    ) : userWon ? (
+                        <>
+                            <div className="celebration-emoji">🎉</div>
+                            <h1 className="victory-title">Victory!</h1>
+                            <h2 className="victory-subtitle">You Won!</h2>
+                            <p className="victory-message">Congratulations! Your team played brilliantly and secured the win!</p>
+                        </>
+                    ) : (
+                        <>
+                            <div className="celebration-emoji">😔</div>
+                            <h1 className="victory-title defeat">Game Over</h1>
+                            <h2 className="victory-subtitle">You Lost</h2>
+                            <p className="victory-message">Better luck next time! {winner.name} played well and won this round.</p>
+                        </>
+                    )}
+                </div>
+                
+                <div className="final-scores">
+                    <h3>Final Scores</h3>
+                    <div className="scores-grid">
+                        <div className={`score-card ${winner.team === 'team1' ? 'winner' : ''}`}>
+                            <div className="team-name">Team 1</div>
+                            <div className="team-players">
+                                {getPlayerDisplayName('plyr1', playerNames)} & {getPlayerDisplayName('plyr3', playerNames)}
                             </div>
-                            <div>
-                                <h4 style={{ color: winner.team === 'team2' ? '#007bff' : '#6c757d' }}>
-                                    Team 2: {winner.team === 'team2' ? winner.score : winner.opponentScore} points
-                                </h4>
+                            <div className="team-score-large">
+                                {winner.team === 'team1' ? winner.score : winner.opponentScore}
                             </div>
+                            {winner.team === 'team1' && <div className="winner-badge">🏆 Winner</div>}
+                        </div>
+                        
+                        <div className={`score-card ${winner.team === 'team2' ? 'winner' : ''}`}>
+                            <div className="team-name">Team 2</div>
+                            <div className="team-players">
+                                {getPlayerDisplayName('plyr2', playerNames)} & {getPlayerDisplayName('plyr4', playerNames)}
+                            </div>
+                            <div className="team-score-large">
+                                {winner.team === 'team2' ? winner.score : winner.opponentScore}
+                            </div>
+                            {winner.team === 'team2' && <div className="winner-badge">🏆 Winner</div>}
                         </div>
                     </div>
                 </div>

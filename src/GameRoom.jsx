@@ -244,9 +244,11 @@ const GameRoom = ({ user, authenticatedFetch }) => {
       <div className="game-room">
         <h2>Game Not Found</h2>
         <p>The game you're looking for doesn't exist or has been removed.</p>
-        <button onClick={() => navigate('/lobby')} className="back-btn">
-          Back to Lobby
-        </button>
+        <div className="secondary-actions">
+          <button onClick={() => navigate('/lobby')} className="btn back-btn">
+            Back to Lobby
+          </button>
+        </div>
       </div>
     );
   }
@@ -264,9 +266,11 @@ const GameRoom = ({ user, authenticatedFetch }) => {
         <div className="game-room">
           <h2>Game In Progress</h2>
           <p>This game has already started and you're not a participant.</p>
-          <button onClick={() => navigate('/lobby')} className="back-btn">
-            Back to Lobby
-          </button>
+          <div className="secondary-actions">
+            <button onClick={() => navigate('/lobby')} className="btn back-btn">
+              Back to Lobby
+            </button>
+          </div>
         </div>
       );
     }
@@ -293,11 +297,11 @@ const GameRoom = ({ user, authenticatedFetch }) => {
           onTerminateGame={terminateGame}
         />
         <div className="game-room-actions">
-          <button onClick={() => navigate('/lobby')} className="back-btn">
+          <button onClick={() => navigate('/lobby')} className="btn back-btn">
             Back to Lobby
           </button>
-          <button onClick={terminateGame} className="terminate-btn" style={{backgroundColor: '#dc3545', color: 'white', marginLeft: '10px'}}>
-            Terminate Game
+          <button onClick={terminateGame} className="btn terminate-btn">
+            End Game
           </button>
         </div>
       </div>
@@ -311,7 +315,6 @@ const GameRoom = ({ user, authenticatedFetch }) => {
   
   // Show waiting room
   const playerCount = game ? getPlayerCount() : 0;
-  const userInGame = game ? isUserInGame() : false;
   
   return (
     <div className="game-room">
@@ -361,46 +364,51 @@ const GameRoom = ({ user, authenticatedFetch }) => {
       
       <div className="game-actions">
         {game && !isUserInGame() && playerCount < 4 && (
-          <button onClick={joinGame} className="join-game-btn">
-            Join Game
-          </button>
+          <div className="primary-actions">
+            <button onClick={joinGame} className="btn join-game-btn">
+              Join Game
+            </button>
+          </div>
         )}
         
         {game && isUserInGame() && playerCount < 4 && (
           <div className="waiting-message">
             <p>Waiting for more players... ({playerCount}/4)</p>
             <small>Share this game ID with friends: <strong>{gameId}</strong></small>
-            <button 
-              onClick={() => fillWithBots()}
-              className="fill-bots-btn"
-              style={{backgroundColor: '#28a745', color: 'white', marginTop: '10px', padding: '10px 20px'}}
-            >
-              Fill with Bots
-            </button>
           </div>
         )}
         
         {game && playerCount === 4 && game.status === 'waiting' && (
-          <button onClick={startGame} className="start-game-btn">
-            Start Game (All players ready!)
-          </button>
+          <div className="primary-actions">
+            <button onClick={startGame} className="btn start-game-btn">
+              Start Game (All players ready!)
+            </button>
+          </div>
         )}
         
-        <button onClick={() => navigate('/lobby')} className="back-btn">
-          Back to Lobby
-        </button>
-        
-        {game && (
-          <button onClick={loadGame} className="refresh-btn">
-            Refresh Game
+        <div className="secondary-actions">
+          {game && (
+            <button onClick={loadGame} className="btn refresh-btn">
+              Refresh Game
+            </button>
+          )}
+          
+          {game && playerCount < 4 && isUserInGame() && (
+            <button onClick={() => fillWithBots()} className="btn fill-bots-btn">
+              Fill with Bots
+            </button>
+          )}
+          
+          <button onClick={() => navigate('/lobby')} className="btn back-btn">
+            Back to Lobby
           </button>
-        )}
-        
-        {game && isUserInGame() && (
-          <button onClick={terminateGame} className="terminate-btn" style={{backgroundColor: '#dc3545', color: 'white', marginLeft: '10px'}}>
-            Terminate Game
-          </button>
-        )}
+          
+          {game && isUserInGame() && (
+            <button onClick={terminateGame} className="btn terminate-btn">
+              End Game
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

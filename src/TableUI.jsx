@@ -276,8 +276,16 @@ export default function TableUI({
                 
                 {/* Points Section */}
                 <div className="pointsSection">
-                    <h4>Team 1 ({getPlayerDisplayName('plyr1', playerNames)} & {getPlayerDisplayName('plyr3', playerNames)}): {(team1Points || 0) + calculatePoints(collectedCards?.plyr1 || []) + calculatePoints(collectedCards?.plyr3 || [])}</h4>
-                    <h4>Team 2 ({getPlayerDisplayName('plyr2', playerNames)} & {getPlayerDisplayName('plyr4', playerNames)}): {(team2Points || 0) + calculatePoints(collectedCards?.plyr2 || []) + calculatePoints(collectedCards?.plyr4 || [])}</h4>
+                    <div className="team-score">
+                        <span className="team-label">Team 1</span>
+                        <span className="team-members">{getPlayerDisplayName('plyr1', playerNames)} & {getPlayerDisplayName('plyr3', playerNames)}</span>
+                        <span className="team-points">{(team1Points || 0) + calculatePoints(collectedCards?.plyr1 || []) + calculatePoints(collectedCards?.plyr3 || [])}</span>
+                    </div>
+                    <div className="team-score">
+                        <span className="team-label">Team 2</span>
+                        <span className="team-members">{getPlayerDisplayName('plyr2', playerNames)} & {getPlayerDisplayName('plyr4', playerNames)}</span>
+                        <span className="team-points">{(team2Points || 0) + calculatePoints(collectedCards?.plyr2 || []) + calculatePoints(collectedCards?.plyr4 || [])}</span>
+                    </div>
                 </div>
                 
                 {/* Timer Display */}
@@ -292,7 +300,6 @@ export default function TableUI({
                 
                 {/* Board - Large and prominent */}
                 <div className='playerArea' id='board'>
-                    <h3>Board</h3>
                     <div className="cardDivBoard">
                         {boardVisible ? renderBoardCards() : <div>Cards Hidden</div>}
                     </div>
@@ -340,8 +347,16 @@ export default function TableUI({
                 )}
                 
                 <div className="pointsSection">
-                    <h4>Team 1 ({getPlayerDisplayName('plyr1', playerNames)} & {getPlayerDisplayName('plyr3', playerNames)}) Points: {(team1Points || 0) + calculatePoints(collectedCards?.plyr1 || []) + calculatePoints(collectedCards?.plyr3 || [])}</h4>
-                    <h4>Team 2 ({getPlayerDisplayName('plyr2', playerNames)} & {getPlayerDisplayName('plyr4', playerNames)}) Points: {(team2Points || 0) + calculatePoints(collectedCards?.plyr2 || []) + calculatePoints(collectedCards?.plyr4 || [])}</h4>
+                    <div className="team-score">
+                        <span className="team-label">Team 1</span>
+                        <span className="team-members">{getPlayerDisplayName('plyr1', playerNames)} & {getPlayerDisplayName('plyr3', playerNames)}</span>
+                        <span className="team-points">{(team1Points || 0) + calculatePoints(collectedCards?.plyr1 || []) + calculatePoints(collectedCards?.plyr3 || [])}</span>
+                    </div>
+                    <div className="team-score">
+                        <span className="team-label">Team 2</span>
+                        <span className="team-members">{getPlayerDisplayName('plyr2', playerNames)} & {getPlayerDisplayName('plyr4', playerNames)}</span>
+                        <span className="team-points">{(team2Points || 0) + calculatePoints(collectedCards?.plyr2 || []) + calculatePoints(collectedCards?.plyr4 || [])}</span>
+                    </div>
                 </div>
                 
                 {/* Timer Display */}
@@ -366,7 +381,6 @@ export default function TableUI({
                 
                 {/* Board - Center */}
                 <div className='playerArea' id='board'>
-                    <h3>Board</h3>
                     <div className="cardDivBoard">
                         {boardVisible ? renderBoardCards() : <div>Cards Hidden</div>}
                     </div>

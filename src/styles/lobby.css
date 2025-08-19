@@ -208,6 +208,236 @@
   color: #6c757d;
 }
 
+/* Game Room Styles */
+.game-room {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.game-room h2 {
+  text-align: center;
+  color: #495057;
+  margin-bottom: 30px;
+  font-size: 2em;
+}
+
+.game-info {
+  background-color: #f8f9fa;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 25px;
+  text-align: center;
+}
+
+.game-info p {
+  margin: 8px 0;
+  font-size: 16px;
+}
+
+.game-info strong {
+  color: #495057;
+}
+
+.players-list {
+  background-color: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 25px;
+}
+
+.players-list h3 {
+  text-align: center;
+  color: #495057;
+  margin-bottom: 20px;
+  font-size: 1.4em;
+}
+
+.player-positions {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+}
+
+.player-slot {
+  padding: 15px;
+  border-radius: 6px;
+  text-align: center;
+  font-size: 14px;
+  border: 2px solid #dee2e6;
+  background-color: #f8f9fa;
+}
+
+.player-slot.occupied {
+  background-color: #e8f5e8;
+  border-color: #28a745;
+  color: #155724;
+}
+
+.player-slot.current-user {
+  background-color: #e3f2fd;
+  border-color: #007bff;
+  color: #0d47a1;
+  font-weight: bold;
+}
+
+.player-slot.empty {
+  background-color: #fff3cd;
+  border-color: #ffc107;
+  color: #856404;
+}
+
+/* Game Actions Container */
+.game-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-top: 30px;
+}
+
+.waiting-message {
+  text-align: center;
+  padding: 20px;
+  background-color: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 8px;
+  margin-bottom: 15px;
+}
+
+.waiting-message p {
+  margin: 10px 0;
+  color: #856404;
+  font-size: 16px;
+}
+
+.waiting-message small {
+  color: #6c5806;
+  font-size: 14px;
+}
+
+/* Unified Button Styles for Game Room */
+.game-room .btn {
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: 500;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: center;
+  min-width: 150px;
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.game-room .btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.game-room .btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.game-room .btn:disabled {
+  background-color: #6c757d !important;
+  color: #fff !important;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Primary Action Buttons */
+.join-game-btn {
+  background-color: #007bff;
+  color: white;
+  font-weight: bold;
+  min-width: 200px;
+}
+
+.join-game-btn:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+/* Start Game Button - Special prominent styling */
+.game-room button.btn.start-game-btn {
+  background: linear-gradient(145deg, #28a745, #218838) !important;
+  background-color: #28a745 !important;
+  color: white !important;
+  font-weight: bold;
+  min-width: 200px;
+  box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3) !important;
+}
+
+.game-room button.btn.start-game-btn:hover:not(:disabled) {
+  background: linear-gradient(145deg, #218838, #1e7e34) !important;
+  background-color: #218838 !important;
+  box-shadow: 0 6px 12px rgba(40, 167, 69, 0.4) !important;
+  transform: translateY(-1px);
+}
+
+/* Secondary Action Buttons */
+.fill-bots-btn, .refresh-btn {
+  background-color: #28a745;
+  color: white;
+}
+
+.fill-bots-btn:hover:not(:disabled), .refresh-btn:hover:not(:disabled) {
+  background-color: #1e7e34;
+}
+
+/* Navigation Buttons */
+.back-btn {
+  background-color: #6c757d;
+  color: white;
+}
+
+.back-btn:hover:not(:disabled) {
+  background-color: #545b62;
+}
+
+/* Danger Buttons */
+.terminate-btn {
+  background-color: #dc3545;
+  color: white;
+}
+
+.terminate-btn:hover:not(:disabled) {
+  background-color: #c82333;
+}
+
+/* Primary Actions Container */
+.primary-actions {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+/* Secondary Actions Container */
+.secondary-actions {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+/* Game Room Actions (for in-game state) */
+.game-room-actions {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 20px;
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .lobby-container {
@@ -230,5 +460,60 @@
   
   .active-games-list {
     padding: 15px;
+  }
+
+  /* Game Room Mobile Styles */
+  .game-room {
+    padding: 15px;
+  }
+
+  .game-room h2 {
+    font-size: 1.6em;
+    margin-bottom: 20px;
+  }
+
+  .player-positions {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .player-slot {
+    padding: 12px;
+    font-size: 13px;
+  }
+
+  .game-actions {
+    gap: 12px;
+  }
+
+  .game-room .btn {
+    width: 100%;
+    min-width: unset;
+    font-size: 15px;
+    padding: 14px 20px;
+  }
+
+  .primary-actions, .secondary-actions {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .secondary-actions .btn {
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  .game-room-actions {
+    flex-direction: column;
+    gap: 12px;
+    padding: 15px;
+  }
+
+  .waiting-message {
+    padding: 15px;
+  }
+
+  .waiting-message p {
+    font-size: 15px;
   }
 }

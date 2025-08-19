@@ -5,17 +5,14 @@
   width: 100%;
   max-width: 1400px;
   min-width: 800px;
-  padding: 20px;
-  background: linear-gradient(135deg, #f1f3f4 0%, #e8eaed 100%);
-  border: 3px solid #bdc3c7;
-  border-radius: 20px;
-  box-shadow: 
-    0 8px 25px rgba(0, 0, 0, 0.1),
-    inset 0 1px 3px rgba(255, 255, 255, 0.8);
+  padding: 15px;
+  background: #ffffff;
+  border: 1px solid #dee2e6;
+  border-radius: 12px;
   display: grid;
   grid-template-columns: 280px 1fr 280px;
   grid-template-rows: auto auto 1fr 1fr auto;
-  gap: 15px;
+  gap: 12px;
   position: relative;
   margin: 0 auto;
   overflow: visible;
@@ -24,57 +21,73 @@
 /* Points Section */
 .pointsSection {
   grid-column: 1 / span 3;
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(5px);
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
   padding: 15px;
-  text-align: center;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
 }
 
-.pointsSection h4 {
-  margin: 8px 0;
+.team-score {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  padding: 8px;
+  border-radius: 6px;
+  background: #f8f9fa;
+}
+
+.team-label {
+  font-size: 14px;
+  font-weight: 700;
   color: #495057;
-  font-size: 16px;
-  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.team-members {
+  font-size: 13px;
+  color: #6c757d;
+  font-weight: 500;
+  text-align: center;
+}
+
+.team-points {
+  font-size: 20px;
+  font-weight: 700;
+  color: #28a745;
+  margin-top: 2px;
 }
 
 /* Timer Display for desktop - positioned at top center, compact */
 .timer-container {
   position: fixed;
-  top: 80px;
+  top: 90px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 1000;
+  width: 280px;
+  min-width: 280px;
+  max-width: 280px;
 }
 
-/* Board Area */
+/* Board Area - Clean with green felt look */
 #board {
   grid-column: 2;
   grid-row: 3 / 5;
   background: linear-gradient(135deg, #a8d5ba 0%, #95c8a8 100%);
   border: 2px solid #7fb69a;
-  border-radius: 16px;
-  padding: 20px;
-  box-shadow: 
-    inset 0 2px 10px rgba(0, 0, 0, 0.1),
-    0 4px 15px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  padding: 15px;
   position: relative;
   min-height: 300px;
   color: #2c3e50;
-}
-
-#board::before {
-  content: '';
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  right: 10px;
-  bottom: 10px;
-  border: 1px dashed rgba(44, 62, 80, 0.3);
-  border-radius: 8px;
-  pointer-events: none;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 /* Player Positioning - 4 players around the board */
@@ -102,23 +115,17 @@
 
 /* Player Areas */
 .playerArea {
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(5px);
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  border-radius: 12px;
-  padding: 15px;
+  background: #ffffff;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 12px;
   min-height: 250px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
   transition: all 0.2s ease;
-}
-
-.playerArea:hover {
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
 }
 
 .playerArea.my-player {
   border: 2px solid #28a745;
-  background: rgba(255, 255, 255, 0.95);
+  background: #f8fff8;
 }
 
 .playerArea h3 {
@@ -127,9 +134,7 @@
   color: #495057;
   font-size: 14px;
   font-weight: 600;
-  border-bottom: 2px solid #e9ecef;
-  padding-bottom: 8px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 /* Card Areas */
@@ -139,10 +144,8 @@
   justify-content: center;
   align-items: center;
   gap: 10px;
-  padding: 15px;
+  padding: 10px;
   min-height: 120px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.3);
 }
 
 .cardDivPlay {
@@ -154,8 +157,6 @@
   min-height: 80px;
   margin-bottom: 10px;
   padding: 8px;
-  border-radius: 8px;
-  background: rgba(248, 249, 250, 0.5);
 }
 
 /* Cards */
@@ -518,6 +519,33 @@
     padding: 8px;
     margin: 0;
     border: none;
+  }
+
+  /* Mobile team scores - keep desktop card pattern */
+  .pointsSection {
+    flex-direction: row;
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .team-score {
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 8px 6px;
+  }
+
+  .team-label {
+    font-size: 12px;
+  }
+
+  .team-members {
+    font-size: 11px;
+    text-align: center;
+  }
+
+  .team-points {
+    font-size: 16px;
     border-radius: 12px;
   }
   
@@ -737,9 +765,9 @@
   border-radius: 12px;
   padding: 12px;
   margin: 10px auto;
-  max-width: 300px;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
+  text-align: center;
 }
 
 .timer-container.timer-warning {
@@ -759,20 +787,27 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 8px;
+  width: 100%;
 }
 
 .timer-label {
   font-size: 14px;
   font-weight: 600;
   color: #495057;
+  flex: 1;
+  text-align: left;
 }
 
 .timer-value {
   font-size: 18px;
   font-weight: 700;
   color: #212529;
-  min-width: 35px;
+  width: 40px;
+  min-width: 40px;
+  max-width: 40px;
   text-align: right;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
 }
 
 .timer-progress-bar {
@@ -796,6 +831,13 @@
   font-weight: 600;
   color: #dc3545;
   animation: textBlink 1s infinite;
+  height: 16px;
+  line-height: 16px;
+  margin-top: 4px;
+  display: block;
+  white-space: nowrap;
+  width: 280px;
+  overflow: hidden;
 }
 
 /* Timer animations */
@@ -811,11 +853,9 @@
 @keyframes timerCriticalPulse {
   0%, 100% {
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    transform: scale(1);
   }
   50% {
     box-shadow: 0 6px 25px rgba(220, 53, 69, 0.6);
-    transform: scale(1.02);
   }
 }
 
@@ -850,6 +890,8 @@
   
   .timer-warning-text {
     font-size: 11px;
+    height: 14px;
+    line-height: 14px;
   }
 }
 
@@ -899,5 +941,202 @@
   .controls {
     grid-column: 1 / span 3;
     order: 4;
+  }
+}
+
+/* Game End Screen Styles */
+.game-end-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  padding: 2rem;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 16px;
+  margin: 1rem;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+  text-align: center;
+}
+
+.victory-header {
+  margin-bottom: 2rem;
+  animation: victoryFadeIn 1s ease-out;
+}
+
+.celebration-emoji {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  animation: celebrationBounce 2s infinite;
+}
+
+.victory-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #28a745;
+  margin: 0.5rem 0;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.victory-title.defeat {
+  color: #dc3545;
+}
+
+.victory-subtitle {
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: #495057;
+  margin: 0.5rem 0;
+}
+
+.victory-message {
+  font-size: 1.1rem;
+  color: #6c757d;
+  margin: 1rem 0 0 0;
+  max-width: 500px;
+}
+
+.final-scores {
+  width: 100%;
+  max-width: 600px;
+  margin-bottom: 2rem;
+}
+
+.final-scores h3 {
+  font-size: 1.4rem;
+  color: #495057;
+  margin-bottom: 1.5rem;
+  font-weight: 600;
+}
+
+.scores-grid {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.score-card {
+  flex: 1;
+  background: #ffffff;
+  border: 2px solid #e9ecef;
+  border-radius: 12px;
+  padding: 1.5rem 1rem;
+  position: relative;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.score-card.winner {
+  border-color: #28a745;
+  background: linear-gradient(135deg, #f8fff8 0%, #e8f5e8 100%);
+  transform: scale(1.05);
+  box-shadow: 0 8px 24px rgba(40, 167, 69, 0.2);
+}
+
+.team-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #495057;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.team-players {
+  font-size: 0.9rem;
+  color: #6c757d;
+  margin-bottom: 1rem;
+  font-weight: 500;
+}
+
+.team-score-large {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #28a745;
+  margin-bottom: 0.5rem;
+}
+
+.winner-badge {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  background: #28a745;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+}
+
+/* Animations */
+@keyframes victoryFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes celebrationBounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-10px);
+  }
+  60% {
+    transform: translateY(-5px);
+  }
+}
+
+/* Mobile Game End Screen */
+@media (max-width: 600px) {
+  .game-end-screen {
+    padding: 1.5rem 1rem;
+    margin: 0.5rem;
+    min-height: 50vh;
+  }
+
+  .celebration-emoji {
+    font-size: 3rem;
+  }
+
+  .victory-title {
+    font-size: 2rem;
+  }
+
+  .victory-subtitle {
+    font-size: 1.4rem;
+  }
+
+  .victory-message {
+    font-size: 1rem;
+  }
+
+  .scores-grid {
+    flex-direction: column;
+    gap: 0.8rem;
+  }
+
+  .score-card {
+    padding: 1rem;
+  }
+
+  .score-card.winner {
+    transform: none;
+  }
+
+  .team-score-large {
+    font-size: 2rem;
+  }
+
+  .winner-badge {
+    position: static;
+    display: inline-block;
+    margin-top: 0.5rem;
   }
 }

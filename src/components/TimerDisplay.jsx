@@ -53,12 +53,6 @@ const TimerDisplay = ({ timeLeft, isActive, playerId, playerNames, currentPositi
                 />
             </div>
             
-            {/* Warning pulse for low time */}
-            {timeLeft <= 10 && (
-                <div className="timer-warning-text">
-                    {timeLeft <= 5 ? '⚠️ Time almost up!' : '⏰ 10 seconds left!'}
-                </div>
-            )}
             
         </div>
     );
