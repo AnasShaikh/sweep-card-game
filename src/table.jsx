@@ -956,6 +956,8 @@ export default function Table({ gameId, user, position, playerNames, socket, onG
             collectedCards={collectedCards}
             team1Points={team1Points}
             team2Points={team2Points}
+            team1SeepCount={team1SeepCount}
+            team2SeepCount={team2SeepCount}
             
             // Timer State
             timeLeft={timeLeft}

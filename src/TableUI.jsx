@@ -65,6 +65,8 @@ export default function TableUI({
     collectedCards,
     team1Points,
     team2Points,
+    team1SeepCount,
+    team2SeepCount,
     
     // Timer State
     timeLeft,
@@ -279,12 +281,28 @@ export default function TableUI({
                     <div className="team-score">
                         <span className="team-label">Team 1</span>
                         <span className="team-members">{getPlayerDisplayName('plyr1', playerNames)} & {getPlayerDisplayName('plyr3', playerNames)}</span>
-                        <span className="team-points">{(team1Points || 0) + calculatePoints(collectedCards?.plyr1 || []) + calculatePoints(collectedCards?.plyr3 || [])}</span>
+                        <div className="points-and-seeps">
+                            <span className="team-points">{(team1Points || 0) + calculatePoints(collectedCards?.plyr1 || []) + calculatePoints(collectedCards?.plyr3 || [])}</span>
+                            <div className="seep-indicators">
+                                {Array.from({ length: team1SeepCount || 0 }, (_, i) => (
+                                    <div key={i} className="seep-dot" title={`Seep ${i + 1}`}></div>
+                                ))}
+                                {team1SeepCount === 0 && <span className="seep-text">0 Seeps</span>}
+                            </div>
+                        </div>
                     </div>
                     <div className="team-score">
                         <span className="team-label">Team 2</span>
                         <span className="team-members">{getPlayerDisplayName('plyr2', playerNames)} & {getPlayerDisplayName('plyr4', playerNames)}</span>
-                        <span className="team-points">{(team2Points || 0) + calculatePoints(collectedCards?.plyr2 || []) + calculatePoints(collectedCards?.plyr4 || [])}</span>
+                        <div className="points-and-seeps">
+                            <span className="team-points">{(team2Points || 0) + calculatePoints(collectedCards?.plyr2 || []) + calculatePoints(collectedCards?.plyr4 || [])}</span>
+                            <div className="seep-indicators">
+                                {Array.from({ length: team2SeepCount || 0 }, (_, i) => (
+                                    <div key={i} className="seep-dot" title={`Seep ${i + 1}`}></div>
+                                ))}
+                                {team2SeepCount === 0 && <span className="seep-text">0 Seeps</span>}
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
@@ -350,12 +368,28 @@ export default function TableUI({
                     <div className="team-score">
                         <span className="team-label">Team 1</span>
                         <span className="team-members">{getPlayerDisplayName('plyr1', playerNames)} & {getPlayerDisplayName('plyr3', playerNames)}</span>
-                        <span className="team-points">{(team1Points || 0) + calculatePoints(collectedCards?.plyr1 || []) + calculatePoints(collectedCards?.plyr3 || [])}</span>
+                        <div className="points-and-seeps">
+                            <span className="team-points">{(team1Points || 0) + calculatePoints(collectedCards?.plyr1 || []) + calculatePoints(collectedCards?.plyr3 || [])}</span>
+                            <div className="seep-indicators">
+                                {Array.from({ length: team1SeepCount || 0 }, (_, i) => (
+                                    <div key={i} className="seep-dot" title={`Seep ${i + 1}`}></div>
+                                ))}
+                                {team1SeepCount === 0 && <span className="seep-text">0 Seeps</span>}
+                            </div>
+                        </div>
                     </div>
                     <div className="team-score">
                         <span className="team-label">Team 2</span>
                         <span className="team-members">{getPlayerDisplayName('plyr2', playerNames)} & {getPlayerDisplayName('plyr4', playerNames)}</span>
-                        <span className="team-points">{(team2Points || 0) + calculatePoints(collectedCards?.plyr2 || []) + calculatePoints(collectedCards?.plyr4 || [])}</span>
+                        <div className="points-and-seeps">
+                            <span className="team-points">{(team2Points || 0) + calculatePoints(collectedCards?.plyr2 || []) + calculatePoints(collectedCards?.plyr4 || [])}</span>
+                            <div className="seep-indicators">
+                                {Array.from({ length: team2SeepCount || 0 }, (_, i) => (
+                                    <div key={i} className="seep-dot" title={`Seep ${i + 1}`}></div>
+                                ))}
+                                {team2SeepCount === 0 && <span className="seep-text">0 Seeps</span>}
+                            </div>
+                        </div>
                     </div>
                 </div>
                 

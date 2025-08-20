@@ -64,6 +64,61 @@
   margin-top: 2px;
 }
 
+/* Seep indicators styling */
+.points-and-seeps {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.seep-indicators {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  justify-content: center;
+  min-height: 20px;
+}
+
+.seep-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+  box-shadow: 
+    0 2px 4px rgba(255, 107, 53, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  animation: seepPulse 2s ease-in-out infinite;
+  cursor: default;
+  border: 1px solid rgba(255, 107, 53, 0.6);
+}
+
+.seep-dot:nth-child(2) {
+  animation-delay: 0.5s;
+}
+
+.seep-text {
+  font-size: 11px;
+  color: #6c757d;
+  font-weight: 500;
+  cursor: default;
+}
+
+@keyframes seepPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 
+      0 2px 4px rgba(255, 107, 53, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+  50% {
+    transform: scale(1.1);
+    box-shadow: 
+      0 3px 8px rgba(255, 107, 53, 0.5),
+      inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  }
+}
+
 /* Timer Display for desktop - positioned at top center, compact */
 .timer-container {
   position: fixed;
@@ -547,6 +602,16 @@
   .team-points {
     font-size: 16px;
     border-radius: 12px;
+  }
+
+  /* Mobile seep indicators */
+  .seep-dot {
+    width: 10px;
+    height: 10px;
+  }
+
+  .seep-text {
+    font-size: 10px;
   }
   
   /* Stack order for mobile: Points -> Board -> Your Cards -> Controls -> Others */

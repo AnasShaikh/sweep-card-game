@@ -1,14 +1,174 @@
-// src/botAI.js - Bot AI logic for Seep card game
-import { getCardValue, formatCardName, findAllPickupCombinations } from './tableLogic.js';
+// src/botAI.js - Enhanced Bot AI logic for Seep card game
+import { getCardValue, formatCardName, findAllPickupCombinations, getStackValue, canAddToStack, getStackCreator } from './tableLogic.js';
+import { confirmStack, confirmAddToStack } from './tableActions.js';
+
+// === ADVANCED BOT AI SYSTEM ===
 
 /**
- * Enhanced helper function to check for bot pickup opportunities (including seeps)
+ * Card evaluation system - assigns strategic value to cards
+ * @param {string} card - Card to evaluate
+ * @param {Array} boardCards - Current board state
+ * @param {Object} gameContext - Additional game context
+ * @returns {number} - Strategic value score
+ */
+export const evaluateCard = (card, boardCards = [], gameContext = {}) => {
+  const cardValue = getCardValue(formatCardName(card));
+  const cardName = card.toLowerCase();
+  let score = 0;
+  
+  // Base point values (Seep scoring system)
+  if (cardName.includes('spades')) {
+    score += cardValue; // Spades = face value points
+  } else if (cardValue === 1) {
+    score += 1; // Aces = 1 point each
+  } else if (cardName === '10 of diamonds') {
+    score += 6; // Special card = 6 points
+  }
+  
+  // Strategic value bonuses
+  
+  // High pickup potential (can collect many board cards)
+  const matchingBoardCards = boardCards.filter(boardCard => {
+    const boardValue = getCardValue(formatCardName(boardCard));
+    return boardValue === cardValue;
+  });
+  score += matchingBoardCards.length * 2; // +2 for each matching board card
+  
+  // Seep potential (can clear entire board)
+  if (matchingBoardCards.length === boardCards.length && boardCards.length > 0) {
+    score += 50; // Massive bonus for seep opportunity
+  }
+  
+  // Stack creation potential
+  if (gameContext.call && (cardValue === gameContext.call || cardValue % gameContext.call === 0)) {
+    score += 3; // Bonus for stack-eligible cards
+  }
+  
+  // Defensive value (prevents opponent opportunities)
+  if (cardValue >= 10) {
+    score += 2; // High cards are often defensive
+  }
+  
+  return score;
+};
+
+/**
+ * Game memory system - tracks played cards and infers opponent hands
+ * @param {Object} gameState - Current game state
+ * @returns {Object} - Memory analysis
+ */
+export const analyzeGameMemory = (gameState) => {
+  const fullDeck = generateFullDeck();
+  const playedCards = getPlayedCards(gameState);
+  const remainingCards = fullDeck.filter(card => !playedCards.includes(card));
+  
+  return {
+    playedCards,
+    remainingCards,
+    totalPlayed: playedCards.length,
+    remainingCount: remainingCards.length,
+    // Probability analysis for opponent hands
+    opponentHandEstimates: estimateOpponentHands(gameState, remainingCards)
+  };
+};
+
+/**
+ * Generate complete deck for memory tracking
+ * @returns {Array} - Full 52-card deck
+ */
+const generateFullDeck = () => {
+  const suits = ['spades', 'hearts', 'diamonds', 'clubs'];
+  const values = ['ace', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'jack', 'queen', 'king'];
+  const deck = [];
+  
+  suits.forEach(suit => {
+    values.forEach(value => {
+      deck.push(`${value} of ${suit}`);
+    });
+  });
+  
+  return deck;
+};
+
+/**
+ * Extract all played cards from game state
+ * @param {Object} gameState - Current game state
+ * @returns {Array} - All played cards
+ */
+const getPlayedCards = (gameState) => {
+  const played = [];
+  
+  // Add all cards currently in hands
+  Object.keys(gameState.players).forEach(player => {
+    if (player !== 'board' && Array.isArray(gameState.players[player])) {
+      played.push(...gameState.players[player]);
+    }
+  });
+  
+  // Add board cards
+  if (Array.isArray(gameState.players.board)) {
+    played.push(...gameState.players.board);
+  }
+  
+  // Add collected cards
+  if (gameState.collectedCards) {
+    Object.values(gameState.collectedCards).forEach(collection => {
+      if (Array.isArray(collection)) {
+        played.push(...collection);
+      }
+    });
+  }
+  
+  return played;
+};
+
+/**
+ * Estimate what cards opponents might hold
+ * @param {Object} gameState - Current game state
+ * @param {Array} remainingCards - Cards not yet accounted for
+ * @returns {Object} - Opponent hand estimates
+ */
+const estimateOpponentHands = (gameState, remainingCards) => {
+  const estimates = {};
+  const players = ['plyr1', 'plyr2', 'plyr3', 'plyr4'];
+  
+  players.forEach(player => {
+    if (gameState.players[player]) {
+      const handSize = gameState.players[player].length;
+      estimates[player] = {
+        knownCards: gameState.players[player],
+        handSize,
+        possibleCards: remainingCards, // Simplified - could be more sophisticated
+        estimatedStrength: calculateHandStrength(gameState.players[player])
+      };
+    }
+  });
+  
+  return estimates;
+};
+
+/**
+ * Calculate strategic strength of a hand
+ * @param {Array} hand - Cards in hand
+ * @returns {number} - Hand strength score
+ */
+const calculateHandStrength = (hand) => {
+  if (!Array.isArray(hand)) return 0;
+  
+  return hand.reduce((total, card) => {
+    return total + evaluateCard(card, [], {});
+  }, 0);
+};
+
+/**
+ * Enhanced helper function to check for bot pickup opportunities with intelligence
  * @param {Array} botHand - Bot's hand cards
  * @param {Array} boardCards - Cards on the board
- * @returns {Object|null} - Pickup opportunity or null
+ * @param {Object} gameContext - Game context for advanced analysis
+ * @returns {Object|null} - Best pickup opportunity or null
  */
-export const canBotPickup = (botHand, boardCards) => {
-  console.log('DEBUG: canBotPickup called with:');
+export const canBotPickup = (botHand, boardCards, gameContext = {}) => {
+  console.log('DEBUG: Enhanced canBotPickup called with:');
   console.log('DEBUG: Hand cards:', botHand);
   console.log('DEBUG: Board cards:', boardCards);
   
@@ -18,37 +178,64 @@ export const canBotPickup = (botHand, boardCards) => {
   }
   
   let bestMove = null;
+  let bestScore = -1;
   
+  // Analyze all possible pickup moves and score them
   for (const handCard of botHand) {
     const handValue = getCardValue(formatCardName(handCard));
-    console.log('DEBUG: Checking hand card:', handCard, 'value:', handValue);
+    console.log('DEBUG: Evaluating hand card:', handCard, 'value:', handValue);
     
     // Check for pickup opportunities with this hand card
     for (const boardCard of boardCards) {
       const boardValue = getCardValue(formatCardName(boardCard));
-      console.log('DEBUG: Comparing with board card:', boardCard, 'value:', boardValue);
+      
       if (handValue === boardValue) {
-        console.log('DEBUG: PICKUP FOUND! Hand card:', handCard, 'can pick up board card:', boardCard);
-        
-        // CRITICAL FIX: Use auto-expansion like human players
+        // Use auto-expansion like human players
         const allPickupCards = findAllPickupCombinations(handValue, boardCards, [boardCard]);
-        console.log('DEBUG: Auto-expanded pickup cards:', allPickupCards);
-        
-        // Check if this would be a seep (clear the entire board)
         const wouldBeSeep = allPickupCards.length === boardCards.length;
-        console.log('DEBUG: Seep check - picking up', allPickupCards.length, 'out of', boardCards.length, 'cards. Is seep:', wouldBeSeep);
         
-        return { 
-          handCard, 
-          boardCards: allPickupCards,
-          isSeep: wouldBeSeep
-        };
+        // Calculate strategic value of this move
+        let moveScore = 0;
+        
+        // Score based on points collected
+        moveScore += evaluateCard(handCard, [], gameContext);
+        allPickupCards.forEach(card => {
+          moveScore += evaluateCard(card, [], gameContext);
+        });
+        
+        // Seep bonus (but check for penalty risk)
+        if (wouldBeSeep) {
+          const botTeam = ['plyr1', 'plyr3'].includes(gameContext.botPosition) ? 'team1' : 'team2';
+          const seepCount = botTeam === 'team1' ? gameContext.team1SeepCount : gameContext.team2SeepCount;
+          
+          if (seepCount < 2) {
+            moveScore += 100; // Huge bonus for beneficial seep
+            console.log('DEBUG: BENEFICIAL SEEP OPPORTUNITY! Score boost:', moveScore);
+          } else {
+            moveScore -= 75; // Penalty for dangerous 3rd seep
+            console.log('DEBUG: DANGEROUS 3RD SEEP - avoiding! Score penalty:', moveScore);
+          }
+        }
+        
+        // Prefer moves that collect more cards
+        moveScore += allPickupCards.length * 2;
+        
+        if (moveScore > bestScore) {
+          bestScore = moveScore;
+          bestMove = { 
+            handCard, 
+            boardCards: allPickupCards,
+            isSeep: wouldBeSeep,
+            strategicScore: moveScore
+          };
+          console.log('DEBUG: New best pickup move:', bestMove);
+        }
       }
     }
   }
   
   if (bestMove) {
-    console.log('DEBUG: Best move found:', bestMove);
+    console.log('DEBUG: Best pickup move selected:', bestMove);
   } else {
     console.log('DEBUG: No pickup opportunities found');
   }
@@ -57,80 +244,267 @@ export const canBotPickup = (botHand, boardCards) => {
 };
 
 /**
- * Helper function to detect stack creation opportunities (following game rules)
+ * HUMAN-LIKE stack creation - try combinations like humans do
  * @param {Array} botHand - Bot's hand cards
  * @param {Array} boardCards - Cards on the board
  * @param {number} call - The current call value
- * @returns {Object|null} - Stack opportunity or null
+ * @param {Object} gameContext - Game context for strategic analysis
+ * @returns {Object|null} - Valid stack opportunity or null
  */
-export const canBotCreateStack = (botHand, boardCards, call) => {
-  console.log('=== STACK DETECTION START ===');
-  console.log('DEBUG: Checking stack creation opportunities with call:', call);
+/**
+ * Bot stack creation using EXACT human functions
+ * This prevents illegal stacks by using the same validation humans use
+ */
+export const canBotCreateStack = (botHand, boardCards, call, gameContext = {}) => {
+  console.log('=== BOT USING HUMAN STACK FUNCTIONS ===');
   
-  if (!boardCards || boardCards.length < 2) {
-    console.log('DEBUG: Not enough board cards for stacking');
+  if (!boardCards || boardCards.length === 0) {
     return null;
   }
   
-  if (!call) {
-    console.log('DEBUG: No call made yet - cannot create stacks');
-    return null;
-  }
-  
-  // Try different stack values that follow game rules
+  // Try stack creation like humans do - attempt combinations and let validation handle it
   for (const handCard of botHand) {
-    const handValue = getCardValue(formatCardName(handCard));
-    console.log('DEBUG: Checking hand card for stack:', handCard, 'value:', handValue);
-    
-    // RULE 1: Stack value must equal the call OR be a multiple of the call
-    if (handValue !== call && handValue % call !== 0) {
-      console.log('DEBUG: Skipping - stack value must equal call or be multiple of call. Value:', handValue, 'Call:', call);
-      continue;
-    }
-    
-    // RULE 2: Must have an extra card matching the call in hand (excluding the hand card being used)
-    const remainingCards = botHand.filter(card => card !== handCard);
-    const hasCallCard = remainingCards.some(card => getCardValue(formatCardName(card)) === call);
-    
-    if (!hasCallCard) {
-      console.log('DEBUG: Skipping - need extra card matching call', call, 'in hand. Remaining cards:', remainingCards);
-      continue;
-    }
-    
-    // Find board cards that match this value
-    const matchingBoardCards = boardCards.filter(boardCard => {
-      const boardValue = getCardValue(formatCardName(boardCard));
-      return boardValue === handValue;
-    });
-    
-    // Need at least 1 matching board card to make a stack worthwhile
-    if (matchingBoardCards.length >= 1) {
-      console.log('DEBUG: 📚 VALID STACK OPPORTUNITY! Hand card:', handCard, 'Stack value:', handValue, 'Call:', call, 'Matching board cards:', matchingBoardCards);
-      return {
+    for (const boardCard of boardCards) {
+      // Skip existing stacks for new stack creation
+      if (typeof boardCard === 'string' && boardCard.startsWith('Stack of ')) {
+        continue;
+      }
+      
+      const selectedTableCards = [boardCard];
+      
+      // Test if this would work using EXACT human validation
+      const attempt = testHumanStackCreation(
         handCard,
-        stackValue: handValue,
-        boardCards: matchingBoardCards
-      };
+        selectedTableCards, 
+        call,
+        gameContext,
+        botHand
+      );
+      
+      if (attempt.isValid) {
+        console.log('DEBUG: ✅ HUMAN-VALIDATED STACK:', handCard, '+', selectedTableCards, '= Stack of', attempt.stackValue);
+        return {
+          type: 'create',
+          handCard,
+          stackValue: attempt.stackValue,
+          boardCards: selectedTableCards,
+          strategicScore: 25
+        };
+      }
     }
   }
   
-  console.log('DEBUG: No valid stack opportunities found following game rules');
+  // Also try adding to existing stacks
+  const existingStacks = boardCards.filter(card => 
+    typeof card === 'string' && card.startsWith('Stack of ')
+  );
+  
+  for (const stack of existingStacks) {
+    for (const handCard of botHand) {
+      const attempt = testHumanAddToStack(handCard, stack, gameContext, botHand);
+      
+      if (attempt.isValid) {
+        console.log('DEBUG: ✅ HUMAN-VALIDATED ADD TO STACK:', handCard, 'to', stack);
+        return {
+          type: 'add',
+          handCard,
+          targetStack: stack,
+          stackValue: getStackValue(stack),
+          strategicScore: 20
+        };
+      }
+    }
+  }
+  
+  console.log('DEBUG: No human-validated stack opportunities found');
   return null;
 };
 
 /**
- * Main bot decision-making function
- * Implements priority system: 1) Seeps, 2) Stacks, 3) Regular pickups, 4) Throw away
+ * Test stack creation using human validation functions
+ */
+const testHumanStackCreation = (selectedHandCard, selectedTableCards, call, gameContext, botHand) => {
+  // Create a mock game state for testing
+  const mockPlayers = {
+    [gameContext.botPosition]: botHand,
+    board: selectedTableCards // Use the board cards from context
+  };
+  
+  const mockCollectedCards = {};
+  const mockTeam1Points = 0;
+  const mockTeam2Points = 0;
+  const mockTeam1SeepCount = 0;
+  const mockTeam2SeepCount = 0;
+  const mockLastCollector = null;
+  
+  // Mock the confirmation function callback
+  let testResult = { isValid: false };
+  const mockConfirmFunction = () => {
+    testResult = { isValid: true };
+    return { success: true };
+  };
+  
+  try {
+    // Call the EXACT human stack validation function
+    const result = confirmStack(
+      null, // selectedStackToAddTo
+      selectedHandCard,
+      selectedTableCards,
+      call,
+      gameContext.moveCount || 1,
+      mockPlayers,
+      gameContext.botPosition,
+      mockConfirmFunction, // onGameAction
+      mockCollectedCards,
+      mockTeam1Points,
+      mockTeam2Points,
+      mockTeam1SeepCount,
+      mockTeam2SeepCount,
+      mockLastCollector,
+      mockConfirmFunction // confirmAddToStackFn
+    );
+    
+    if (result && testResult.isValid) {
+      // Calculate stack value from the result
+      const handCardValue = getCardValue(formatCardName(selectedHandCard));
+      const tableCardsValue = selectedTableCards.reduce((sum, card) => {
+        return sum + getCardValue(formatCardName(card));
+      }, 0);
+      const totalStackValue = handCardValue + tableCardsValue;
+      
+      // Find valid stack value
+      let stackValue = call;
+      if ((gameContext.moveCount || 1) > 1) {
+        const validValues = [9, 10, 11, 12, 13].filter(val => totalStackValue % val === 0);
+        stackValue = validValues[0] || call;
+      }
+      
+      return { isValid: true, stackValue };
+    }
+  } catch (error) {
+    console.log('DEBUG: Human validation rejected:', error.message || 'Invalid stack');
+  }
+  
+  return { isValid: false };
+};
+
+/**
+ * Test adding to stack using human validation functions  
+ */
+const testHumanAddToStack = (selectedHandCard, selectedStackToAddTo, gameContext, botHand) => {
+  // Create mock game state
+  const mockPlayers = {
+    [gameContext.botPosition]: botHand,
+    board: gameContext.boardCards || []
+  };
+  
+  let testResult = { isValid: false };
+  const mockOnGameAction = () => {
+    testResult = { isValid: true };
+  };
+  
+  try {
+    // Call the EXACT human add-to-stack validation function
+    const result = confirmAddToStack(
+      selectedStackToAddTo,
+      selectedHandCard,
+      [], // selectedTableCards (empty for simple add)
+      mockPlayers,
+      gameContext.botPosition,
+      gameContext.moveCount || 1,
+      mockOnGameAction,
+      {},  // collectedCards
+      0,   // team1Points
+      0,   // team2Points  
+      0,   // team1SeepCount
+      0,   // team2SeepCount
+      null // lastCollector
+    );
+    
+    return { isValid: testResult.isValid };
+  } catch (error) {
+    console.log('DEBUG: Human add-to-stack validation rejected:', error.message || 'Invalid add');
+    return { isValid: false };
+  }
+};
+
+// REMOVED: Old problematic stack logic
+
+// OLD VALIDATION FUNCTIONS REMOVED - Now using actual human functions
+
+
+// DISABLED: Add-to-stack functionality to prevent illegal stacks
+// Only allow creating new stacks for now
+
+
+/**
+ * Evaluate the strategic value of a stack move (BALANCED SCORING)
+ */
+const evaluateStackMove = (handCard, targetCards, gameContext, moveType) => {
+  let score = 15; // Good base stack bonus to encourage stacking
+  
+  // Base score from card values (reduced impact)
+  score += evaluateCard(handCard, [], gameContext) * 0.3;
+  targetCards.forEach(card => {
+    score += evaluateCard(card, [], gameContext) * 0.2; // Board cards worth less
+  });
+  
+  // Stack-specific bonuses
+  const handValue = getCardValue(formatCardName(handCard));
+  
+  // Universal stack bonus
+  score += 10; 
+  
+  // Bonus for high-value stacks
+  if (handValue >= 10) score += 5;
+  
+  // Bonus for multiple cards in stack
+  score += targetCards.length * 3;
+  
+  // Bonus for spades stacking
+  if (handCard.toLowerCase().includes('spades')) score += 4;
+  
+  // Move type bonuses
+  switch (moveType) {
+    case 'add':
+      score += 8; // Adding to existing stack is good
+      break;
+    case 'create':
+      score += 12; // Creating new stacks gets big bonus
+      break;
+  }
+  
+  // Team strategy bonus
+  if (gameContext.team1Points < gameContext.team2Points && 
+      ['plyr1', 'plyr3'].includes(gameContext.botPosition)) {
+    score += 3; // Behind team should be more aggressive
+  }
+  
+  console.log('DEBUG: Stack move score breakdown:', {
+    handCard,
+    targetCards: targetCards.length,
+    moveType,
+    finalScore: score
+  });
+  
+  return Math.max(score, 2); // Ensure minimum score for any valid stack
+};
+
+/**
+ * Enhanced main bot decision-making function with advanced AI
+ * Implements intelligent priority system with memory and strategic analysis
  * @param {Object} gameState - Current game state
  * @param {string} botPosition - Bot's position (plyr1, plyr2, plyr3, plyr4)
  * @returns {Object} - Bot move action
  */
 export const generateBotMove = (gameState, botPosition) => {
-  console.log(`=== BOT MOVE GENERATION START (${botPosition}) ===`);
+  console.log(`=== ENHANCED BOT MOVE GENERATION START (${botPosition}) ===`);
   console.log('Current game state:', {
     moveCount: gameState.moveCount,
     currentTurn: gameState.currentTurn,
-    call: gameState.call
+    call: gameState.call,
+    team1SeepCount: gameState.team1SeepCount || 0,
+    team2SeepCount: gameState.team2SeepCount || 0
   });
   
   try {
@@ -142,36 +516,87 @@ export const generateBotMove = (gameState, botPosition) => {
       return null;
     }
     
-    console.log('Bot analysis:', {
+    // Enhanced game context for smart decisions
+    const gameContext = {
+      botPosition,
+      call: gameState.call,
+      team1SeepCount: gameState.team1SeepCount || 0,
+      team2SeepCount: gameState.team2SeepCount || 0,
+      moveCount: gameState.moveCount || 1,
+      team1Points: gameState.team1Points || 0,
+      team2Points: gameState.team2Points || 0
+    };
+    
+    // Analyze game memory and opponent patterns
+    const memoryAnalysis = analyzeGameMemory(gameState);
+    console.log('Memory analysis:', {
+      totalPlayed: memoryAnalysis.totalPlayed,
+      remainingCount: memoryAnalysis.remainingCount
+    });
+    
+    console.log('Enhanced bot analysis:', {
       position: botPosition,
       handSize: botHand.length,
       handCards: botHand,
       boardSize: currentBoard.length,
-      boardCards: currentBoard
+      boardCards: currentBoard,
+      handStrength: calculateHandStrength(botHand)
     });
     
-    // Check for opportunities in priority order: 1) Seeps, 2) Stacks, 3) Regular pickups
-    const pickupOpportunity = canBotPickup(botHand, currentBoard);
-    const stackOpportunity = canBotCreateStack(botHand, currentBoard, gameState.call);
+    // Check for opportunities with enhanced intelligence
+    const pickupOpportunity = canBotPickup(botHand, currentBoard, gameContext);
+    const stackOpportunity = canBotCreateStack(botHand, currentBoard, gameState.call, gameContext);
     
-    // Priority 1: Seeps (highest priority)
-    if (pickupOpportunity && pickupOpportunity.isSeep) {
+    console.log('=== DECISION ANALYSIS ===');
+    console.log('Pickup opportunity:', pickupOpportunity ? `Score: ${pickupOpportunity.strategicScore}` : 'None');
+    console.log('Stack opportunity:', stackOpportunity ? `Score: ${stackOpportunity.strategicScore}` : 'None');
+    
+    // Enhanced Priority 1: Beneficial Seeps (avoid 3rd seep penalty)
+    if (pickupOpportunity && pickupOpportunity.isSeep && pickupOpportunity.strategicScore > 50) {
+      console.log('DEBUG: HIGH-VALUE SEEP selected with score:', pickupOpportunity.strategicScore);
       return createPickupAction(gameState, botPosition, pickupOpportunity, true);
-    } 
-    // Priority 2: Stack creation
-    else if (stackOpportunity) {
-      return createStackAction(gameState, botPosition, stackOpportunity);
-    } 
-    // Priority 3: Regular pickup
-    else if (pickupOpportunity) {
-      return createPickupAction(gameState, botPosition, pickupOpportunity, false);
-    } 
-    // Priority 4: No good options - just throw away a random card
-    else {
-      return createThrowAwayAction(gameState, botPosition);
     }
+    
+    // Enhanced Priority 2: Prioritize ANY valid stack opportunity!
+    if (stackOpportunity && stackOpportunity.strategicScore > 1) {
+      console.log('DEBUG: 📚 STACK PRIORITIZED with score:', stackOpportunity.strategicScore);
+      return createStackAction(gameState, botPosition, stackOpportunity);
+    }
+    
+    // Priority 3: Compare remaining options  
+    const pickupScore = pickupOpportunity ? pickupOpportunity.strategicScore : 0;
+    const stackScore = stackOpportunity ? stackOpportunity.strategicScore : 0;
+    
+    // Strongly prefer stacks over most pickups
+    if (stackOpportunity && (stackScore >= pickupScore * 0.7 || pickupScore < 15)) {
+      console.log('DEBUG: 📚 STACK chosen over pickup - Stack score:', stackScore, 'vs Pickup score:', pickupScore);
+      return createStackAction(gameState, botPosition, stackOpportunity);
+    }
+    
+    // Priority 4: Regular pickup (when valuable)
+    if (pickupOpportunity && pickupScore > 5) {
+      console.log('DEBUG: PICKUP selected with score:', pickupScore);
+      return createPickupAction(gameState, botPosition, pickupOpportunity, false);
+    }
+    
+    // Priority 5: ANY remaining stack opportunity (fallback)
+    if (stackOpportunity) {
+      console.log('DEBUG: 📚 FALLBACK STACK selected with score:', stackScore);
+      return createStackAction(gameState, botPosition, stackOpportunity);
+    }
+    
+    // Priority 6: Any remaining pickup
+    if (pickupOpportunity) {
+      console.log('DEBUG: FALLBACK PICKUP selected with score:', pickupScore);
+      return createPickupAction(gameState, botPosition, pickupOpportunity, false);
+    }
+    
+    // Priority 7: Smart throw away (strategic card selection)
+    console.log('DEBUG: NO GOOD MOVES - strategic throw away');
+    return createThrowAwayAction(gameState, botPosition);
+    
   } catch (error) {
-    console.error('ERROR in generateBotMove:', error);
+    console.error('ERROR in enhanced generateBotMove:', error);
     // Fallback to throw away action
     return createThrowAwayAction(gameState, botPosition);
   }
@@ -271,15 +696,28 @@ const createPickupAction = (gameState, botPosition, pickupOpportunity, isSeep) =
 };
 
 /**
- * Create a stack action for the bot
+ * Enhanced stack action creator supporting multiple stack types
  * @param {Object} gameState - Current game state
  * @param {string} botPosition - Bot's position
- * @param {Object} stackOpportunity - Stack details
+ * @param {Object} stackOpportunity - Stack details with type
  * @returns {Object} - Stack action
  */
 const createStackAction = (gameState, botPosition, stackOpportunity) => {
+  const { type, handCard, stackValue } = stackOpportunity;
+  
+  if (type === 'add') {
+    return createAddToStackAction(gameState, botPosition, stackOpportunity);
+  } else {
+    return createNewStackAction(gameState, botPosition, stackOpportunity);
+  }
+};
+
+/**
+ * Create a new stack action
+ */
+const createNewStackAction = (gameState, botPosition, stackOpportunity) => {
   const { handCard, stackValue, boardCards } = stackOpportunity;
-  console.log('DEBUG: 📚 Bot creating stack with value:', stackValue);
+  console.log('DEBUG: 📚 Bot creating NEW stack with value:', stackValue);
   
   const updatedHand = gameState.players[botPosition].filter(card => card !== handCard);
   const updatedBoard = gameState.players.board.filter(card => !boardCards.includes(card));
@@ -299,17 +737,15 @@ const createStackAction = (gameState, botPosition, stackOpportunity) => {
   const currentIndex = playerOrder.indexOf(botPosition);
   const nextPlayer = playerOrder[(currentIndex + 1) % 4];
   
-  console.log('DEBUG: 📚 Bot created stack:', stackString);
+  console.log('DEBUG: 📚 Bot created NEW stack:', stackString);
   
   return {
     action: 'stack',
     players: updatedPlayers,
     currentTurn: nextPlayer,
     moveCount: gameState.moveCount + 1,
-    // Add details for notification
     stackValue,
     stackCards: [handCard, ...boardCards],
-    // Preserve all other game state
     deck: gameState.deck,
     call: gameState.call,
     boardVisible: gameState.boardVisible,
@@ -326,18 +762,122 @@ const createStackAction = (gameState, botPosition, stackOpportunity) => {
 };
 
 /**
- * Create a throw away action for the bot (fallback)
+ * Add to existing stack action
+ */
+const createAddToStackAction = (gameState, botPosition, stackOpportunity) => {
+  const { handCard, targetStack } = stackOpportunity;
+  console.log('DEBUG: 📚 Bot ADDING to existing stack:', targetStack);
+  
+  const updatedHand = gameState.players[botPosition].filter(card => card !== handCard);
+  const updatedBoard = gameState.players.board.filter(card => card !== targetStack);
+  
+  // Modify the existing stack string
+  const newStackString = targetStack + ' + ' + handCard;
+  updatedBoard.push(newStackString);
+  
+  const updatedPlayers = { 
+    ...gameState.players,
+    [botPosition]: updatedHand,
+    board: updatedBoard
+  };
+  
+  // Move to next player
+  const playerOrder = ['plyr2', 'plyr3', 'plyr4', 'plyr1'];
+  const currentIndex = playerOrder.indexOf(botPosition);
+  const nextPlayer = playerOrder[(currentIndex + 1) % 4];
+  
+  console.log('DEBUG: 📚 Bot ADDED to stack, new stack:', newStackString);
+  
+  return {
+    action: 'addToStack',
+    players: updatedPlayers,
+    currentTurn: nextPlayer,
+    moveCount: gameState.moveCount + 1,
+    originalStack: targetStack,
+    addedCard: handCard,
+    deck: gameState.deck,
+    call: gameState.call,
+    boardVisible: gameState.boardVisible,
+    collectedCards: gameState.collectedCards,
+    dealVisible: gameState.dealVisible,
+    remainingCardsDealt: gameState.remainingCardsDealt,
+    showDRCButton: gameState.showDRCButton,
+    team1SeepCount: gameState.team1SeepCount,
+    team2SeepCount: gameState.team2SeepCount,
+    team1Points: gameState.team1Points,
+    team2Points: gameState.team2Points,
+    lastCollector: gameState.lastCollector
+  };
+};
+
+/**
+ * Smart card selection for throwing away - replaces random selection
+ * @param {Array} botHand - Bot's hand cards
+ * @param {Array} boardCards - Current board state
+ * @param {Object} gameContext - Game context for analysis
+ * @returns {string} - Best card to throw away
+ */
+const selectSmartThrowAway = (botHand, boardCards, gameContext) => {
+  console.log('DEBUG: Selecting smart throw-away from hand:', botHand);
+  
+  let worstCard = null;
+  let worstScore = Infinity;
+  
+  // Evaluate each card and choose the least valuable
+  botHand.forEach(card => {
+    let cardScore = evaluateCard(card, boardCards, gameContext);
+    
+    // Penalty for cards that could help opponents
+    const cardValue = getCardValue(formatCardName(card));
+    const opponentCouldPickup = boardCards.some(boardCard => {
+      const boardValue = getCardValue(formatCardName(boardCard));
+      return boardValue === cardValue;
+    });
+    
+    if (opponentCouldPickup) {
+      cardScore += 10; // Higher score = worse to throw (helps opponents)
+      console.log('DEBUG: Card', card, 'could help opponents - penalty applied');
+    }
+    
+    // Prefer throwing non-point cards
+    const cardName = card.toLowerCase();
+    if (!cardName.includes('spades') && cardValue !== 1 && cardName !== '10 of diamonds') {
+      cardScore -= 5; // Lower score = better to throw
+    }
+    
+    console.log('DEBUG: Card', card, 'throw-away score:', cardScore);
+    
+    if (cardScore < worstScore) {
+      worstScore = cardScore;
+      worstCard = card;
+    }
+  });
+  
+  console.log('DEBUG: Selected card to throw away:', worstCard, 'with score:', worstScore);
+  return worstCard || botHand[0]; // Fallback to first card
+};
+
+/**
+ * Create a smart throw away action for the bot
  * @param {Object} gameState - Current game state
  * @param {string} botPosition - Bot's position
  * @returns {Object} - Throw away action
  */
 const createThrowAwayAction = (gameState, botPosition) => {
-  // Priority 4: No good options - just throw away a random card
   const botHand = gameState.players[botPosition];
-  const randomCardIndex = Math.floor(Math.random() * botHand.length);
-  const cardToPlay = botHand[randomCardIndex];
+  const currentBoard = gameState.players.board || [];
   
-  const updatedBoard = [...gameState.players.board, cardToPlay];
+  // Use smart selection instead of random
+  const gameContext = {
+    botPosition,
+    call: gameState.call,
+    team1SeepCount: gameState.team1SeepCount || 0,
+    team2SeepCount: gameState.team2SeepCount || 0
+  };
+  
+  const cardToPlay = selectSmartThrowAway(botHand, currentBoard, gameContext);
+  
+  const updatedBoard = [...currentBoard, cardToPlay];
   const updatedHand = botHand.filter(card => card !== cardToPlay);
   
   const updatedPlayers = { 
@@ -351,7 +891,7 @@ const createThrowAwayAction = (gameState, botPosition) => {
   const currentIndex = playerOrder.indexOf(botPosition);
   const nextPlayer = playerOrder[(currentIndex + 1) % 4];
   
-  console.log('DEBUG: Bot throwing away card:', cardToPlay);
+  console.log('DEBUG: Bot strategically throwing away card:', cardToPlay);
   
   return {
     action: 'throwAway',

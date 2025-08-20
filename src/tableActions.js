@@ -293,11 +293,24 @@ export const confirmAddToStack = (
         card !== selectedStackToAddTo && !selectedTableCards.filter(tc => tc !== selectedStackToAddTo).includes(card)
     );
     
-    // Create updated stack string with new value
+    // Create updated stack string with CORRECT ownership logic
     const otherSelectedCards = selectedTableCards.filter(card => card !== selectedStackToAddTo);
     const allSelectedCards = [selectedHandCard, ...otherSelectedCards];
     const originalCards = selectedStackToAddTo.split(': ')[1] || '';
-    const newStackString = `Stack of ${newStackValue} (by ${currentTurn}): ${originalCards} + ${allSelectedCards.join(' + ')}`;
+    
+    // OWNERSHIP RULE: Keep original creator if stacking on top, change if modifying value
+    let stackCreator;
+    if (isStackingOnTop) {
+        // Stacking on top - keep original creator
+        stackCreator = getStackCreator(selectedStackToAddTo);
+        console.log(`Stacking on top - keeping original creator: ${stackCreator}`);
+    } else {
+        // Value modification - new player becomes creator
+        stackCreator = currentTurn;
+        console.log(`Value modification - new creator: ${stackCreator}`);
+    }
+    
+    const newStackString = `Stack of ${newStackValue} (by ${stackCreator}): ${originalCards} + ${allSelectedCards.join(' + ')}`;
     
     // STACK MERGING LOGIC: Check if there's another stack with the same value
     const existingStackWithSameValue = newBoard.find(card => 
