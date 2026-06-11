@@ -2,14 +2,23 @@
 import pkg from 'pg';
 const { Pool } = pkg;
 
-// Database connection pool
-const pool = new Pool({
+const localConfig = {
   user: 'seep_user',
   host: 'localhost',
   database: 'seep_game',
   password: 'seep_password',
   port: 5432,
-});
+};
+
+const productionConfig = process.env.DATABASE_URL
+  ? {
+      connectionString: process.env.DATABASE_URL,
+      ssl: { rejectUnauthorized: false },
+    }
+  : null;
+
+// Database connection pool
+const pool = new Pool(productionConfig || localConfig);
 
 // Test connection on startup
 pool.on('connect', () => {
